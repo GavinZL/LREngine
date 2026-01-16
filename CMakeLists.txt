@@ -66,6 +66,11 @@ set(LRENGINE_CORE_SOURCES
     src/core/LRRenderContext.cpp
 )
 
+# 工具库源文件
+set(LRENGINE_UTILS_SOURCES
+    src/utils/LRLog.cpp
+)
+
 # 核心头文件
 set(LRENGINE_CORE_HEADERS
     include/lrengine/core/LRDefines.h
@@ -79,6 +84,11 @@ set(LRENGINE_CORE_HEADERS
     include/lrengine/core/LRPipelineState.h
     include/lrengine/core/LRFence.h
     include/lrengine/core/LRRenderContext.h
+)
+
+# 工具库头文件
+set(LRENGINE_UTILS_HEADERS
+    include/lrengine/utils/LRLog.h
 )
 
 # 平台接口头文件
@@ -145,6 +155,7 @@ set(LRENGINE_MATH_HEADERS
 # 合并所有源文件
 set(LRENGINE_SOURCES
     ${LRENGINE_CORE_SOURCES}
+    ${LRENGINE_UTILS_SOURCES}
     ${LRENGINE_FACTORY_SOURCES}
 )
 
@@ -155,6 +166,7 @@ endif()
 # 合并所有头文件
 set(LRENGINE_HEADERS
     ${LRENGINE_CORE_HEADERS}
+    ${LRENGINE_UTILS_HEADERS}
     ${LRENGINE_INTERFACE_HEADERS}
     ${LRENGINE_FACTORY_HEADERS}
     ${LRENGINE_MATH_HEADERS}
