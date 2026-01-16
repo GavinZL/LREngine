@@ -16,7 +16,12 @@
 #include "TypeConverterMTL.h"
 #include "lrengine/core/LRError.h"
 
-#import <Cocoa/Cocoa.h>
+// 平台特定的头文件
+#if TARGET_OS_IPHONE || TARGET_OS_IOS
+    #import <UIKit/UIKit.h>
+#else
+    #import <Cocoa/Cocoa.h>
+#endif
 
 namespace lrengine {
 namespace render {
@@ -80,19 +85,58 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
 
     // 设置Metal层（如果提供了窗口句柄）
     if (m_windowHandle) {
-        NSWindow* window = (__bridge NSWindow*)m_windowHandle;
-        NSView* contentView = [window contentView];
-        
-        // 设置CAMetalLayer
-        [contentView setWantsLayer:YES];
-        m_metalLayer = [CAMetalLayer layer];
-        m_metalLayer.device = m_device;
-        m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-        m_metalLayer.framebufferOnly = YES;
-        m_metalLayer.drawableSize = CGSizeMake(m_width, m_height);
-        m_metalLayer.displaySyncEnabled = m_vsync;
-        
-        [contentView setLayer:m_metalLayer];
+        #if TARGET_OS_IPHONE || TARGET_OS_IOS
+            // iOS平台: 使用UIWindow和UIView
+            UIWindow* window = (__bridge UIWindow*)m_windowHandle;
+            UIView* contentView = [window rootViewController].view;
+            
+            if (!contentView) {
+                contentView = window;
+            }
+            
+            // 设置CAMetalLayer
+            m_metalLayer = [CAMetalLayer layer];
+            m_metalLayer.device = m_device;
+            m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+            m_metalLayer.framebufferOnly = YES;
+            
+            // iOS使用UIScreen的scale
+            CGFloat scale = [UIScreen mainScreen].nativeScale;
+            m_metalLayer.contentsScale = scale;
+            m_metalLayer.drawableSize = CGSizeMake(m_width * scale, m_height * scale);
+            
+            // iOS不支持displaySyncEnabled，使用presentationEnabled
+            #if defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
+                if (@available(iOS 13.0, *)) {
+                    m_metalLayer.displaySyncEnabled = m_vsync;
+                }
+            #endif
+            
+            // 设置layer的frame
+            m_metalLayer.frame = contentView.bounds;
+            
+            // 添加到视图层次
+            [contentView.layer addSublayer:m_metalLayer];
+            
+        #else
+            // macOS平台: 使用NSWindow和NSView
+            NSWindow* window = (__bridge NSWindow*)m_windowHandle;
+            NSView* contentView = [window contentView];
+            
+            // 设置CAMetalLayer
+            [contentView setWantsLayer:YES];
+            m_metalLayer = [CAMetalLayer layer];
+            m_metalLayer.device = m_device;
+            m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+            m_metalLayer.framebufferOnly = YES;
+            m_metalLayer.drawableSize = CGSizeMake(m_width, m_height);
+            m_metalLayer.displaySyncEnabled = m_vsync;
+            
+            // macOS使用contentsScale适配Retina显示
+            m_metalLayer.contentsScale = contentView.window.backingScaleFactor;
+            
+            [contentView setLayer:m_metalLayer];
+        #endif
     }
 
     // 创建深度/模板纹理

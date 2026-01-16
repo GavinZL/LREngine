@@ -69,6 +69,11 @@ inline size_t GetIndexTypeSize(IndexType type) {
 
 /**
  * @brief 转换像素格式到Metal像素格式
+ * 
+ * 注意：不同平台支持的格式有所不同
+ * - macOS支持BC压缩格式（桌面GPU）
+ * - iOS支持ASTC和PVRTC压缩格式（移动GPU）
+ * - 部分深度/模板格式在iOS上有限制
  */
 inline MTLPixelFormat ToMTLPixelFormat(PixelFormat format) {
     switch (format) {
@@ -82,11 +87,25 @@ inline MTLPixelFormat ToMTLPixelFormat(PixelFormat format) {
         case PixelFormat::RG32F:            return MTLPixelFormatRG32Float;
         case PixelFormat::RGBA32F:          return MTLPixelFormatRGBA32Float;
         case PixelFormat::RGB10A2:          return MTLPixelFormatRGB10A2Unorm;
+        
+        // 深度格式
         case PixelFormat::Depth16:          return MTLPixelFormatDepth16Unorm;
         case PixelFormat::Depth32F:         return MTLPixelFormatDepth32Float;
-        case PixelFormat::Depth24Stencil8:  return MTLPixelFormatDepth24Unorm_Stencil8;
+        
+        // 深度模板组合格式 - 平台特定处理
+        case PixelFormat::Depth24Stencil8:
+            #if TARGET_OS_IPHONE || TARGET_OS_IOS
+                // iOS不支持Depth24Unorm_Stencil8，回退到Depth32Float_Stencil8
+                return MTLPixelFormatDepth32Float_Stencil8;
+            #else
+                return MTLPixelFormatDepth24Unorm_Stencil8;
+            #endif
+            
         case PixelFormat::Depth32FStencil8: return MTLPixelFormatDepth32Float_Stencil8;
         case PixelFormat::Stencil8:         return MTLPixelFormatStencil8;
+        
+        // BC压缩格式（仅macOS支持）
+        #if !TARGET_OS_IPHONE && !TARGET_OS_IOS
         case PixelFormat::BC1:              return MTLPixelFormatBC1_RGBA;
         case PixelFormat::BC2:              return MTLPixelFormatBC2_RGBA;
         case PixelFormat::BC3:              return MTLPixelFormatBC3_RGBA;
@@ -94,11 +113,19 @@ inline MTLPixelFormat ToMTLPixelFormat(PixelFormat format) {
         case PixelFormat::BC5:              return MTLPixelFormatBC5_RGUnorm;
         case PixelFormat::BC6H:             return MTLPixelFormatBC6H_RGBFloat;
         case PixelFormat::BC7:              return MTLPixelFormatBC7_RGBAUnorm;
+        #endif
+        
+        // ASTC压缩格式（iOS和较新的macOS支持）
         case PixelFormat::ASTC_4x4:         return MTLPixelFormatASTC_4x4_LDR;
         case PixelFormat::ASTC_6x6:         return MTLPixelFormatASTC_6x6_LDR;
         case PixelFormat::ASTC_8x8:         return MTLPixelFormatASTC_8x8_LDR;
+        
+        // ETC2压缩格式（iOS支持，macOS不支持）
+        #if TARGET_OS_IPHONE || TARGET_OS_IOS
         case PixelFormat::ETC2_RGB8:        return MTLPixelFormatETC2_RGB8;
         case PixelFormat::ETC2_RGBA8:       return MTLPixelFormatEAC_RGBA8;
+        #endif
+        
         default:                            return MTLPixelFormatRGBA8Unorm;
     }
 }

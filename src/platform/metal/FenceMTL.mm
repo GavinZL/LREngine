@@ -31,11 +31,37 @@ FenceMTL::~FenceMTL() {
 
 bool FenceMTL::Create() {
     // 检查设备是否支持共享事件
-    if (![m_device supportsFamily:MTLGPUFamilyApple1]) {
-        // 对于不支持共享事件的旧设备，使用简化实现
-        m_signaled = false;
-        return true;
-    }
+    // MTLGPUFamilyApple1在iOS 8.0+和macOS 10.14+上可用
+    #if TARGET_OS_IPHONE || TARGET_OS_IOS
+        // iOS使用GPU Family检测
+        if (@available(iOS 8.0, *)) {
+            if (![m_device supportsFamily:MTLGPUFamilyApple1]) {
+                // 对于不支持共享事件的旧设备，使用简化实现
+                m_signaled = false;
+                return true;
+            }
+        }
+    #else
+        // macOS使用GPU Family检测
+        if (@available(macOS 10.15, *)) {
+            // 优先使用MTLGPUFamilyMac2（macOS 10.15+）
+            if (@available(macOS 13.0, *)) {
+                if (![m_device supportsFamily:MTLGPUFamilyMac2]) {
+                    m_signaled = false;
+                    return true;
+                }
+            } else {
+                // macOS 10.15-12.x使用Mac1
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+                if (![m_device supportsFamily:MTLGPUFamilyMac1]) {
+                    m_signaled = false;
+                    return true;
+                }
+                #pragma clang diagnostic pop
+            }
+        }
+    #endif
     
     m_event = [m_device newSharedEvent];
     

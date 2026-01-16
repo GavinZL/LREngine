@@ -246,9 +246,18 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
     )
     target_compile_definitions(lrengine PUBLIC LRENGINE_ENABLE_METAL)
     
-    # 如果没有启用OpenGL，需要单独链接Cocoa
-    if(NOT LRENGINE_ENABLE_OPENGL)
-        target_link_libraries(lrengine PUBLIC "-framework Cocoa")
+    # 平台特定的框架
+    if(IOS)
+        # iOS平台需要UIKit
+        target_link_libraries(lrengine PUBLIC "-framework UIKit")
+        target_compile_definitions(lrengine PUBLIC LRENGINE_PLATFORM_IOS)
+    else()
+        # macOS平台需要Cocoa和IOKit
+        if(NOT LRENGINE_ENABLE_OPENGL)
+            target_link_libraries(lrengine PUBLIC "-framework Cocoa")
+        endif()
+        target_link_libraries(lrengine PUBLIC "-framework IOKit")
+        target_compile_definitions(lrengine PUBLIC LRENGINE_PLATFORM_MACOS)
     endif()
     
     # 设置Objective-C++编译选项

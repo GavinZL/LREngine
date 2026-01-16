@@ -58,13 +58,20 @@ bool TextureMTL::Create(const TextureDescriptor& desc) {
     texDesc.arrayLength = (desc.type == TextureType::Texture2DArray) ? desc.depth : 1;
     
     // 设置存储模式和使用标志
-    texDesc.storageMode = MTLStorageModeShared;
+    // iOS优先使用Shared模式以获得更好的兼容性
+    #if TARGET_OS_IPHONE || TARGET_OS_IOS
+        texDesc.storageMode = MTLStorageModeShared;
+    #else
+        // macOS支持更多存储模式
+        texDesc.storageMode = MTLStorageModeManaged;
+    #endif
+    
     texDesc.usage = MTLTextureUsageShaderRead;
     
     // 深度纹理需要特殊设置
     if (IsDepthFormat(desc.format)) {
         texDesc.usage |= MTLTextureUsageRenderTarget;
-        texDesc.storageMode = MTLStorageModePrivate;
+        texDesc.storageMode = MTLStorageModePrivate;  // 深度纹理在所有平台都用Private
     }
 
     m_texture = [m_device newTextureWithDescriptor:texDesc];
