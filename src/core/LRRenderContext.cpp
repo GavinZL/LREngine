@@ -405,12 +405,20 @@ void LRRenderContext::SetUniformBuffer(LRUniformBuffer* buffer, uint32_t slot) {
     if (buffer) {
         buffer->SetBindingPoint(slot);
         buffer->Bind();
+        // 通知后端实现进行实际绑定
+        if (mImpl) {
+            mImpl->BindUniformBuffer(buffer->GetImpl(), slot);
+        }
     }
 }
 
 void LRRenderContext::SetTexture(LRTexture* texture, uint32_t slot) {
     if (texture) {
         texture->Bind(slot);
+        // 通知后端实现进行实际绑定
+        if (mImpl) {
+            mImpl->BindTexture(texture->GetImpl(), slot);
+        }
     }
 }
 

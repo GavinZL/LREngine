@@ -105,6 +105,11 @@ void BufferMTL::Unmap() {
 
 void BufferMTL::Bind() {
     // Metal中缓冲区绑定在编码命令时完成
+    // 对于Uniform缓冲区，需要通知RenderContext进行绑定
+    if (m_bufferType == BufferType::Uniform) {
+        // 通过RenderContext的ContextMTL接口进行实际绑定
+        // 这将在SetUniformBuffer时调用
+    }
 }
 
 void BufferMTL::Unbind() {

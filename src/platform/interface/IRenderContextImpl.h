@@ -151,6 +151,20 @@ public:
      */
     virtual void BindIndexBuffer(IBufferImpl* buffer) {}
     
+    /**
+     * @brief 绑定Uniform缓冲区
+     * @param buffer 缓冲区实现
+     * @param slot 绑定槽位
+     */
+    virtual void BindUniformBuffer(IBufferImpl* buffer, uint32_t slot) {}
+    
+    /**
+     * @brief 绑定纹理
+     * @param texture 纹理实现
+     * @param slot 绑定槽位
+     */
+    virtual void BindTexture(ITextureImpl* texture, uint32_t slot) {}
+    
     // =========================================================================
     // 绘制命令
     // =========================================================================

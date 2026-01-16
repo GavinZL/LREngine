@@ -49,3 +49,33 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/examples
     )
 endif()
+
+# TexturedCubeMTL示例 (Metal)
+if(LRENGINE_ENABLE_METAL AND APPLE)
+    add_executable(TexturedCubeMTL
+        TexturedCubeMTL/main.mm
+    )
+
+    target_link_libraries(TexturedCubeMTL PRIVATE
+        lrengine
+        glfw
+        "-framework Metal"
+        "-framework QuartzCore"
+        "-framework Cocoa"
+    )
+
+    target_include_directories(TexturedCubeMTL PRIVATE
+        ${LRENGINE_INCLUDE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party
+    )
+
+    # 设置Objective-C++编译选项
+    set_source_files_properties(TexturedCubeMTL/main.mm PROPERTIES
+        COMPILE_FLAGS "-fobjc-arc"
+    )
+
+    # 设置输出目录
+    set_target_properties(TexturedCubeMTL PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/examples
+    )
+endif()

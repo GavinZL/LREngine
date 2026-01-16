@@ -85,6 +85,11 @@ public:
      */
     ResourceHandle GetNativeHandle() const override;
     
+    /**
+     * @brief 获取后端实现指针
+     */
+    ITextureImpl* GetImpl() const { return mImpl; }
+    
 protected:
     friend class LRRenderContext;
     

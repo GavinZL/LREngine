@@ -19,6 +19,8 @@ namespace mtl {
 class BufferMTL;
 class VertexBufferMTL;
 class IndexBufferMTL;
+class UniformBufferMTL;
+class TextureMTL;
 class PipelineStateMTL;
 
 /**
@@ -51,6 +53,8 @@ public:
     void BindPipelineState(IPipelineStateImpl* pipelineState) override;
     void BindVertexBuffer(IBufferImpl* buffer, uint32_t slot) override;
     void BindIndexBuffer(IBufferImpl* buffer) override;
+    void BindUniformBuffer(IBufferImpl* buffer, uint32_t slot) override;
+    void BindTexture(ITextureImpl* texture, uint32_t slot) override;
     
     void DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) override;
     void DrawElements(PrimitiveType primitiveType, uint32_t indexCount, 
@@ -77,6 +81,8 @@ public:
     void SetVertexBuffer(VertexBufferMTL* buffer, uint32_t index);
     void SetIndexBuffer(IndexBufferMTL* buffer);
     void SetPipelineState(PipelineStateMTL* pipelineState);
+    void SetUniformBuffer(UniformBufferMTL* buffer, uint32_t index);
+    void SetTexture(TextureMTL* texture, uint32_t slot);
 
 private:
     void CreateDepthStencilTexture();
