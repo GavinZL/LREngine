@@ -55,6 +55,16 @@ public:
     virtual void SwapBuffers() = 0;
     
     /**
+     * @brief 开始新帧
+     */
+    virtual void BeginFrame() {}
+    
+    /**
+     * @brief 结束当前帧
+     */
+    virtual void EndFrame() {}
+    
+    /**
      * @brief 获取后端类型
      */
     virtual Backend GetBackend() const = 0;
@@ -121,6 +131,25 @@ public:
      * @param stencil 清除模板
      */
     virtual void Clear(uint8_t flags, const float* color, float depth, uint8_t stencil) = 0;
+    
+    /**
+     * @brief 绑定管线状态
+     * @param pipelineState 管线状态实现
+     */
+    virtual void BindPipelineState(IPipelineStateImpl* pipelineState) {}
+    
+    /**
+     * @brief 绑定顶点缓冲区
+     * @param buffer 缓冲区实现
+     * @param slot 绑定槽位
+     */
+    virtual void BindVertexBuffer(IBufferImpl* buffer, uint32_t slot) {}
+    
+    /**
+     * @brief 绑定索引缓冲区
+     * @param buffer 缓冲区实现
+     */
+    virtual void BindIndexBuffer(IBufferImpl* buffer) {}
     
     // =========================================================================
     // 绘制命令

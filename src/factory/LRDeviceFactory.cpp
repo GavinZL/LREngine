@@ -5,9 +5,14 @@
 
 #include "lrengine/factory/LRDeviceFactory.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 
 #ifdef LRENGINE_ENABLE_OPENGL
 #include "platform/opengl/DeviceFactoryGL.h"
+#endif
+
+#ifdef LRENGINE_ENABLE_METAL
+#include "platform/metal/DeviceFactoryMTL.h"
 #endif
 
 namespace lrengine {
@@ -34,7 +39,12 @@ LRDeviceFactory* LRDeviceFactory::GetFactory(Backend backend) {
         
 #ifdef LRENGINE_ENABLE_METAL
         case Backend::Metal: {
-            // TODO: 实现Metal工厂
+            static DeviceFactoryMTL s_mtlFactory;
+            if (s_mtlFactory.IsAvailable()) {
+
+                LR_LOG_INFO("Using Metal backend");
+                return &s_mtlFactory;
+            }
             break;
         }
 #endif

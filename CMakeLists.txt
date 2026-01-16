@@ -17,9 +17,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # 选项
 option(LRENGINE_BUILD_EXAMPLES "Build examples" ON)
 option(LRENGINE_BUILD_TESTS "Build tests" OFF)
-option(LRENGINE_ENABLE_OPENGL "Enable OpenGL backend" ON)
+option(LRENGINE_ENABLE_OPENGL "Enable OpenGL backend" OFF)
 option(LRENGINE_ENABLE_OPENGLES "Enable OpenGL ES backend" OFF)
-option(LRENGINE_ENABLE_METAL "Enable Metal backend" OFF)
+option(LRENGINE_ENABLE_METAL "Enable Metal backend" ON)
 option(LRENGINE_ENABLE_VULKAN "Enable Vulkan backend" OFF)
 
 # 平台检测
@@ -131,6 +131,35 @@ if(LRENGINE_ENABLE_OPENGL)
     )
 endif()
 
+# Metal后端源文件
+if(LRENGINE_ENABLE_METAL AND APPLE)
+    # Metal使用Objective-C++，需要启用相应语言
+    enable_language(OBJCXX)
+    
+    set(LRENGINE_METAL_SOURCES
+        src/platform/metal/ContextMTL.mm
+        src/platform/metal/BufferMTL.mm
+        src/platform/metal/ShaderMTL.mm
+        src/platform/metal/TextureMTL.mm
+        src/platform/metal/FrameBufferMTL.mm
+        src/platform/metal/PipelineStateMTL.mm
+        src/platform/metal/FenceMTL.mm
+        src/platform/metal/DeviceFactoryMTL.mm
+    )
+    
+    set(LRENGINE_METAL_HEADERS
+        src/platform/metal/ContextMTL.h
+        src/platform/metal/BufferMTL.h
+        src/platform/metal/ShaderMTL.h
+        src/platform/metal/TextureMTL.h
+        src/platform/metal/FrameBufferMTL.h
+        src/platform/metal/PipelineStateMTL.h
+        src/platform/metal/FenceMTL.h
+        src/platform/metal/TypeConverterMTL.h
+        src/platform/metal/DeviceFactoryMTL.h
+    )
+endif()
+
 # 工厂源文件
 set(LRENGINE_FACTORY_SOURCES
     src/factory/LRDeviceFactory.cpp
@@ -163,6 +192,10 @@ if(LRENGINE_ENABLE_OPENGL)
     list(APPEND LRENGINE_SOURCES ${LRENGINE_OPENGL_SOURCES})
 endif()
 
+if(LRENGINE_ENABLE_METAL AND APPLE)
+    list(APPEND LRENGINE_SOURCES ${LRENGINE_METAL_SOURCES})
+endif()
+
 # 合并所有头文件
 set(LRENGINE_HEADERS
     ${LRENGINE_CORE_HEADERS}
@@ -174,6 +207,10 @@ set(LRENGINE_HEADERS
 
 if(LRENGINE_ENABLE_OPENGL)
     list(APPEND LRENGINE_HEADERS ${LRENGINE_OPENGL_HEADERS})
+endif()
+
+if(LRENGINE_ENABLE_METAL AND APPLE)
+    list(APPEND LRENGINE_HEADERS ${LRENGINE_METAL_HEADERS})
 endif()
 
 # 创建库
@@ -197,6 +234,27 @@ if(LRENGINE_ENABLE_OPENGL)
     if(APPLE)
         target_link_libraries(lrengine PUBLIC "-framework Cocoa" "-framework IOKit")
     endif()
+endif()
+
+# Metal后端链接
+if(LRENGINE_ENABLE_METAL AND APPLE)
+    target_link_libraries(lrengine PUBLIC
+        "-framework Metal"
+        "-framework MetalKit"
+        "-framework QuartzCore"
+        "-framework Foundation"
+    )
+    target_compile_definitions(lrengine PUBLIC LRENGINE_ENABLE_METAL)
+    
+    # 如果没有启用OpenGL，需要单独链接Cocoa
+    if(NOT LRENGINE_ENABLE_OPENGL)
+        target_link_libraries(lrengine PUBLIC "-framework Cocoa")
+    endif()
+    
+    # 设置Objective-C++编译选项
+    set_source_files_properties(${LRENGINE_METAL_SOURCES} PROPERTIES
+        COMPILE_FLAGS "-fobjc-arc"
+    )
 endif()
 
 # 编译定义

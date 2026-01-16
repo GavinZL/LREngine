@@ -304,11 +304,15 @@ LRFence* LRRenderContext::CreateFence() {
 // =============================================================================
 
 void LRRenderContext::BeginFrame() {
-    // 目前为空，可用于帧开始时的状态重置
+    if (mImpl) {
+        mImpl->BeginFrame();
+    }
 }
 
 void LRRenderContext::EndFrame() {
-    // 目前为空，可用于帧结束时的清理
+    if (mImpl) {
+        mImpl->EndFrame();
+    }
 }
 
 void LRRenderContext::Present() {
@@ -366,13 +370,22 @@ void LRRenderContext::SetPipelineState(LRPipelineState* pipelineState) {
         if (pipelineState->GetShaderProgram()) {
             pipelineState->GetShaderProgram()->Use();
         }
+        
+        // 通知后端绑定管线状态
+        if (mImpl && pipelineState->GetImpl()) {
+            mImpl->BindPipelineState(pipelineState->GetImpl());
+        }
     }
 }
 
 void LRRenderContext::SetVertexBuffer(LRVertexBuffer* buffer, uint32_t slot) {
-    LR_UNUSED(slot);
     if (buffer) {
         buffer->Bind();
+        
+        // 通知后端绑定顶点缓冲区
+        if (mImpl && buffer->GetImpl()) {
+            mImpl->BindVertexBuffer(buffer->GetImpl(), slot);
+        }
     }
 }
 
@@ -380,6 +393,11 @@ void LRRenderContext::SetIndexBuffer(LRIndexBuffer* buffer) {
     if (buffer) {
         buffer->Bind();
         mCurrentIndexType = buffer->GetIndexType();
+        
+        // 通知后端绑定索引缓冲区
+        if (mImpl && buffer->GetImpl()) {
+            mImpl->BindIndexBuffer(buffer->GetImpl());
+        }
     }
 }
 

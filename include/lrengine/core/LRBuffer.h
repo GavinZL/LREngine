@@ -74,6 +74,11 @@ public:
      */
     ResourceHandle GetNativeHandle() const override;
     
+    /**
+     * @brief 获取平台实现
+     */
+    IBufferImpl* GetImpl() const { return mImpl; }
+    
 protected:
     friend class LRRenderContext;
     

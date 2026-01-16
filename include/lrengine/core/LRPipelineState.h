@@ -72,6 +72,11 @@ public:
      */
     ResourceHandle GetNativeHandle() const override;
     
+    /**
+     * @brief 获取平台实现
+     */
+    IPipelineStateImpl* GetImpl() const { return mImpl; }
+    
 protected:
     friend class LRRenderContext;
     
