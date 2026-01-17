@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace hyengine {
+namespace lrengine {
 namespace math {
 
 /**
@@ -115,4 +115,4 @@ enum class InterpolationType : uint8_t {
 };
 
 } // namespace math
-} // namespace hyengine
+} // namespace lrengine

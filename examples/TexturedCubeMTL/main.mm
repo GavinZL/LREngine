@@ -39,7 +39,7 @@
 #include "stb/stb_image.h"
 
 using namespace lrengine::render;
-using namespace hyengine::math;
+using namespace lrengine::math;
 
 // 窗口尺寸
 constexpr int WINDOW_WIDTH = 1024;
@@ -47,16 +47,16 @@ constexpr int WINDOW_HEIGHT = 768;
 
 // 顶点结构：位置 + 纹理坐标 + 法线
 struct Vertex {
-    Vec3 position;
-    Vec2 texCoord;
-    Vec3 normal;
+    Vec3f position;
+    Vec2f texCoord;
+    Vec3f normal;
 };
 
 // Uniform数据结构
 struct Uniforms {
-    Mat4 modelMatrix;
-    Mat4 viewMatrix;
-    Mat4 projectionMatrix;
+    Mat4f modelMatrix;
+    Mat4f viewMatrix;
+    Mat4f projectionMatrix;
 };
 
 // Metal着色器源码 (MSL)
@@ -472,17 +472,17 @@ int main()
             Uniforms uniforms;
             
             // 模型矩阵 - 旋转立方体
-            uniforms.modelMatrix = Mat4::rotateY(rotationAngle) * Mat4::rotateX(rotationAngle * 0.5f).transpose();
+            uniforms.modelMatrix = Mat4f::rotateY(rotationAngle) * Mat4f::rotateX(rotationAngle * 0.5f).transpose();
             
             // 视图矩阵 - 相机位置（从外部观察立方体）
-            Vec3 eye(0.0f, 0.0f, 3.0f);  // 相机在立方体前方，距离3个单位
-            Vec3 center(0.0f, 0.0f, 0.0f);  // 看向立方体中心
-            Vec3 up(0.0f, 1.0f, 0.0f);
-            uniforms.viewMatrix = Mat4::lookAt(eye, center, up).transpose();
+            Vec3f eye(0.0f, 0.0f, 3.0f);  // 相机在立方体前方，距离3个单位
+            Vec3f center(0.0f, 0.0f, 0.0f);  // 看向立方体中心
+            Vec3f up(0.0f, 1.0f, 0.0f);
+            uniforms.viewMatrix = Mat4f::lookAt(eye, center, up).transpose();
             
             // 投影矩阵 - 透视投影（far改回100，避免深度精度问题）
             float aspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
-            uniforms.projectionMatrix = Mat4::perspective(45.0f * 3.14159f / 180.0f, aspect, 0.1f, 100.0f);
+            uniforms.projectionMatrix = Mat4f::perspective(45.0f * 3.14159f / 180.0f, aspect, 0.1f, 100.0f);
             
             // 调试：打印相机位置（仅第一帧）
             static bool firstFrameDebug = true;

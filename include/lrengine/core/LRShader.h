@@ -105,13 +105,13 @@ public:
     void SetUniform(const char* name, float x, float y);
     void SetUniform(const char* name, float x, float y, float z);
     void SetUniform(const char* name, float x, float y, float z, float w);
-    void SetUniform(const char* name, const hyengine::math::Vec2& value);
-    void SetUniform(const char* name, const hyengine::math::Vec3& value);
-    void SetUniform(const char* name, const hyengine::math::Vec4& value);
+    void SetUniform(const char* name, const lrengine::math::Vec2f& value);
+    void SetUniform(const char* name, const lrengine::math::Vec3f& value);
+    void SetUniform(const char* name, const lrengine::math::Vec4f& value);
     void SetUniformMatrix3(const char* name, const float* value, bool transpose = false);
     void SetUniformMatrix4(const char* name, const float* value, bool transpose = false);
-    void SetUniformMatrix3(const char* name, const hyengine::math::Mat3& value, bool transpose = false);
-    void SetUniformMatrix4(const char* name, const hyengine::math::Mat4& value, bool transpose = false);
+    void SetUniformMatrix3(const char* name, const lrengine::math::Mat3f& value, bool transpose = false);
+    void SetUniformMatrix4(const char* name, const lrengine::math::Mat4f& value, bool transpose = false);
     
     /**
      * @brief 获取原生句柄

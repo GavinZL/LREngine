@@ -35,7 +35,7 @@
 #include "stb/stb_image.h"
 
 using namespace lrengine::render;
-using namespace hyengine::math;
+using namespace lrengine::math;
 
 // 窗口尺寸
 constexpr int WINDOW_WIDTH = 1024;
@@ -43,9 +43,9 @@ constexpr int WINDOW_HEIGHT = 768;
 
 // 顶点结构：位置 + 纹理坐标 + 法线
 struct Vertex {
-    Vec3 position;
-    Vec2 texCoord;
-    Vec3 normal;
+    Vec3f position;
+    Vec2f texCoord;
+    Vec3f normal;
 };
 
 // OpenGL着色器源码 (GLSL)
@@ -440,15 +440,15 @@ int main()
         rotationAngle += 0.01f;
 
         // 计算MVP矩阵
-        Mat4 model = Mat4::rotateY(rotationAngle) * Mat4::rotateX(rotationAngle * 0.5f);
+        Mat4f model = Mat4f::rotateY(rotationAngle) * Mat4f::rotateX(rotationAngle * 0.5f);
         
-        Vec3 eye(0.0f, 0.0f, 10.0f);
-        Vec3 center(0.0f, 0.0f, 0.0f);
-        Vec3 up(0.0f, 1.0f, 0.0f);
-        Mat4 view = Mat4::lookAt(eye, center, up);
+        Vec3f eye(0.0f, 0.0f, 10.0f);
+        Vec3f center(0.0f, 0.0f, 0.0f);
+        Vec3f up(0.0f, 1.0f, 0.0f);
+        Mat4f view = Mat4f::lookAt(eye, center, up);
         
         float aspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
-        Mat4 projection = Mat4::perspective(45.0f * 3.14159f / 180.0f, aspect, 0.1f, 100.0f);
+        Mat4f projection = Mat4f::perspective(45.0f * 3.14159f / 180.0f, aspect, 0.1f, 100.0f);
 
         // 开始帧
         context->BeginFrame();

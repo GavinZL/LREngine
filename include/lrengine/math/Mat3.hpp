@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cstring>
 
-namespace hyengine {
+namespace lrengine {
 namespace math {
 
 // 前置声明
@@ -17,7 +17,7 @@ template <typename T> class QuaternionT;
  * @brief 3x3矩阵模板类
  * @tparam T 数值类型 (float, double等)
  * 
- * @note 使用列主序存储,符合OpenGL规范
+ * @note 使用行主序存储,符合OpenGL规范
  * 矩阵布局: m[row][col]
  */
 template <typename T>
@@ -275,6 +275,6 @@ template <typename T>
 const Mat3T<T> Mat3T<T>::IDENTITY = Mat3T<T>::identity();
 
 } // namespace math
-} // namespace hyengine
+} // namespace lrengine
 
 #endif // HY_MATH_MAT3_HPP

@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cassert>
 
-namespace hyengine {
+namespace lrengine {
 namespace math {
 
 /**
@@ -213,6 +213,6 @@ template <typename T>
 const Vec2T<T> Vec2T<T>::UNIT_SCALE = Vec2T<T>(1, 1);
 
 } // namespace math
-} // namespace hyengine
+} // namespace lrengine
 
 #endif // HY_MATH_VEC2_HPP

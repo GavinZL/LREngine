@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cassert>
 
-namespace hyengine {
+namespace lrengine {
 namespace math {
 
 /**
@@ -343,6 +343,6 @@ template <typename T>
 const QuaternionT<T> QuaternionT<T>::IDENTITY = QuaternionT<T>(0, 0, 0, 1);
 
 } // namespace math
-} // namespace hyengine
+} // namespace lrengine
 
 #endif // HY_MATH_QUATERNION_HPP

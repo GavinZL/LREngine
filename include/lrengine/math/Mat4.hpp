@@ -9,7 +9,7 @@
 #include <cassert>
 #include <cstring>
 
-namespace hyengine {
+namespace lrengine {
 namespace math {
 
 // 前置声明
@@ -19,7 +19,7 @@ template <typename T> class QuaternionT;
  * @brief 4x4矩阵模板类
  * @tparam T 数值类型 (float, double等)
  * 
- * @note 使用列主序存储,符合OpenGL规范
+ * @note 使用行主序存储,符合OpenGL规范
  * 矩阵布局: m[row][col]
  * 
  * 变换顺序: Scale -> Rotate -> Translate (右手坐标系)
@@ -438,6 +438,6 @@ template <typename T>
 const Mat4T<T> Mat4T<T>::IDENTITY = Mat4T<T>::identity();
 
 } // namespace math
-} // namespace hyengine
+} // namespace lrengine
 
 #endif // HY_MATH_MAT4_HPP

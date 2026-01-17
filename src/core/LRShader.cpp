@@ -198,15 +198,15 @@ void LRShaderProgram::SetUniform(const char* name, float x, float y, float z, fl
     }
 }
 
-void LRShaderProgram::SetUniform(const char* name, const hyengine::math::Vec2& value) {
+void LRShaderProgram::SetUniform(const char* name, const lrengine::math::Vec2f& value) {
     SetUniform(name, value.x, value.y);
 }
 
-void LRShaderProgram::SetUniform(const char* name, const hyengine::math::Vec3& value) {
+void LRShaderProgram::SetUniform(const char* name, const lrengine::math::Vec3f& value) {
     SetUniform(name, value.x, value.y, value.z);
 }
 
-void LRShaderProgram::SetUniform(const char* name, const hyengine::math::Vec4& value) {
+void LRShaderProgram::SetUniform(const char* name, const lrengine::math::Vec4f& value) {
     SetUniform(name, value.x, value.y, value.z, value.w);
 }
 
@@ -224,11 +224,11 @@ void LRShaderProgram::SetUniformMatrix4(const char* name, const float* value, bo
     }
 }
 
-void LRShaderProgram::SetUniformMatrix3(const char* name, const hyengine::math::Mat3& value, bool transpose) {
+void LRShaderProgram::SetUniformMatrix3(const char* name, const lrengine::math::Mat3f& value, bool transpose) {
     SetUniformMatrix3(name, value.m, transpose);
 }
 
-void LRShaderProgram::SetUniformMatrix4(const char* name, const hyengine::math::Mat4& value, bool transpose) {
+void LRShaderProgram::SetUniformMatrix4(const char* name, const lrengine::math::Mat4f& value, bool transpose) {
     SetUniformMatrix4(name, value.m, transpose);
 }
 
