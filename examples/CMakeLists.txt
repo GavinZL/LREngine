@@ -19,6 +19,25 @@ if(LRENGINE_ENABLE_OPENGL)
     set_target_properties(HelloTriangle PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/examples
     )
+
+    # TexturedCubeGL示例 (OpenGL)
+    add_executable(TexturedCubeGL
+        TexturedCubeGL/main.cpp
+    )
+
+    target_link_libraries(TexturedCubeGL PRIVATE
+        lrengine
+        glfw
+    )
+
+    target_include_directories(TexturedCubeGL PRIVATE
+        ${LRENGINE_INCLUDE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party
+    )
+
+    set_target_properties(TexturedCubeGL PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/examples
+    )
 endif()
 
 # HelloTriangleMTL示例 (Metal)

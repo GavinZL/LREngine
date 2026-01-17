@@ -5,6 +5,7 @@
 
 #include "ShaderGL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 #include <vector>
 
 #ifdef LRENGINE_ENABLE_OPENGL
@@ -49,6 +50,8 @@ bool ShaderGL::Compile(const ShaderDescriptor& desc)
     glShaderSource(m_shaderID, 1, &sourcePtr, nullptr);
     glCompileShader(m_shaderID);
 
+    LR_LOG_DEBUG_F("OpenGL CompileShader: stage=%d, name=%s", (int)desc.stage, desc.debugName ? desc.debugName : "unknown");
+
     GLint success;
     glGetShaderiv(m_shaderID, GL_COMPILE_STATUS, &success);
 
@@ -65,6 +68,7 @@ bool ShaderGL::Compile(const ShaderDescriptor& desc)
         }
 
         LR_SET_ERROR(ErrorCode::ShaderCompileFailed, m_compileError.c_str());
+        LR_LOG_ERROR_F("OpenGL Shader Compile Failed: %s", m_compileError.c_str());
         glDeleteShader(m_shaderID);
         m_shaderID = 0;
         return false;
@@ -161,6 +165,8 @@ bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
     // 链接程序
     glLinkProgram(m_programID);
 
+    LR_LOG_DEBUG("OpenGL LinkProgram");
+
     GLint success;
     glGetProgramiv(m_programID, GL_LINK_STATUS, &success);
 
@@ -177,6 +183,7 @@ bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
         }
 
         LR_SET_ERROR(ErrorCode::ShaderLinkFailed, m_linkError.c_str());
+        LR_LOG_ERROR_F("OpenGL Shader Link Failed: %s", m_linkError.c_str());
         glDeleteProgram(m_programID);
         m_programID = 0;
         return false;

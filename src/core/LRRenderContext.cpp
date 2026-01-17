@@ -11,6 +11,7 @@
 #include "lrengine/core/LRPipelineState.h"
 #include "lrengine/core/LRFence.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 #include "lrengine/factory/LRDeviceFactory.h"
 #include "platform/interface/IRenderContextImpl.h"
 #include "platform/interface/IBufferImpl.h"
@@ -45,6 +46,7 @@ void LRRenderContext::Destroy(LRRenderContext* context) {
 }
 
 bool LRRenderContext::Initialize(const RenderContextDescriptor& desc) {
+    LR_LOG_INFO_F("LRRenderContext::Initialize: backend=%d, size=%ux%u", (int)desc.backend, desc.width, desc.height);
     // 获取设备工厂
     LRDeviceFactory* factory = LRDeviceFactory::GetFactory(desc.backend);
     if (!factory) {
@@ -360,6 +362,7 @@ void LRRenderContext::SetScissor(int32_t x, int32_t y, int32_t width, int32_t he
 }
 
 void LRRenderContext::SetPipelineState(LRPipelineState* pipelineState) {
+    LR_LOG_TRACE_F("LRRenderContext::SetPipelineState: %p", pipelineState);
     mCurrentPipelineState = pipelineState;
     
     if (pipelineState) {
@@ -379,6 +382,7 @@ void LRRenderContext::SetPipelineState(LRPipelineState* pipelineState) {
 }
 
 void LRRenderContext::SetVertexBuffer(LRVertexBuffer* buffer, uint32_t slot) {
+    LR_LOG_TRACE_F("LRRenderContext::SetVertexBuffer: %p, slot=%u", buffer, slot);
     if (buffer) {
         buffer->Bind();
         
@@ -413,6 +417,7 @@ void LRRenderContext::SetUniformBuffer(LRUniformBuffer* buffer, uint32_t slot) {
 }
 
 void LRRenderContext::SetTexture(LRTexture* texture, uint32_t slot) {
+    LR_LOG_TRACE_F("LRRenderContext::SetTexture: %p, slot=%u", texture, slot);
     if (texture) {
         texture->Bind(slot);
         // 通知后端实现进行实际绑定
@@ -446,6 +451,7 @@ void LRRenderContext::ClearStencil(uint8_t stencil) {
 }
 
 void LRRenderContext::Clear(uint8_t flags, float r, float g, float b, float a, float depth, uint8_t stencil) {
+    LR_LOG_TRACE("LRRenderContext::Clear");
     float color[4] = {r, g, b, a};
     if (mImpl) {
         mImpl->Clear(flags, color, depth, stencil);
@@ -457,6 +463,7 @@ void LRRenderContext::Clear(uint8_t flags, float r, float g, float b, float a, f
 // =============================================================================
 
 void LRRenderContext::Draw(uint32_t vertexStart, uint32_t vertexCount) {
+    LR_LOG_TRACE_F("LRRenderContext::Draw: start=%u, count=%u", vertexStart, vertexCount);
     if (mImpl) {
         mImpl->DrawArrays(mCurrentPrimitiveType, vertexStart, vertexCount);
     }

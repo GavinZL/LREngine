@@ -17,7 +17,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # 选项
 option(LRENGINE_BUILD_EXAMPLES "Build examples" ON)
 option(LRENGINE_BUILD_TESTS "Build tests" OFF)
-option(LRENGINE_ENABLE_OPENGL "Enable OpenGL backend" OFF)
+option(LRENGINE_ENABLE_OPENGL "Enable OpenGL backend" ON)
 option(LRENGINE_ENABLE_OPENGLES "Enable OpenGL ES backend" OFF)
 option(LRENGINE_ENABLE_METAL "Enable Metal backend" ON)
 option(LRENGINE_ENABLE_VULKAN "Enable Vulkan backend" OFF)

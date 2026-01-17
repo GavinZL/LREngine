@@ -15,6 +15,7 @@
 #include "FenceGL.h"
 #include "TypeConverterGL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 
 namespace lrengine {
 namespace render {
@@ -116,6 +117,8 @@ void RenderContextGL::SetScissor(int32_t x, int32_t y, int32_t width, int32_t he
 void RenderContextGL::Clear(uint8_t flags, const float* color, float depth, uint8_t stencil) {
     GLbitfield clearMask = 0;
     
+    LR_LOG_TRACE_F("OpenGL Clear: flags=0x%x, depth=%.2f, stencil=%u", flags, depth, stencil);
+    
     if (flags & ClearColor) {
         if (color) {
             glClearColor(color[0], color[1], color[2], color[3]);
@@ -138,13 +141,50 @@ void RenderContextGL::Clear(uint8_t flags, const float* color, float depth, uint
     }
 }
 
+void RenderContextGL::BindPipelineState(IPipelineStateImpl* pipelineState) {
+    LR_LOG_TRACE_F("OpenGL BindPipelineState: %p", pipelineState);
+    if (pipelineState) {
+        pipelineState->Apply();
+    }
+}
+
+void RenderContextGL::BindVertexBuffer(IBufferImpl* buffer, uint32_t slot) {
+    LR_LOG_TRACE_F("OpenGL BindVertexBuffer: %p, slot=%u", buffer, slot);
+    if (buffer) {
+        buffer->Bind();
+    }
+}
+
+void RenderContextGL::BindIndexBuffer(IBufferImpl* buffer) {
+    LR_LOG_TRACE_F("OpenGL BindIndexBuffer: %p", buffer);
+    if (buffer) {
+        buffer->Bind();
+    }
+}
+
+void RenderContextGL::BindUniformBuffer(IBufferImpl* buffer, uint32_t slot) {
+    LR_LOG_TRACE_F("OpenGL BindUniformBuffer: %p, slot=%u", buffer, slot);
+    if (buffer) {
+        static_cast<gl::UniformBufferGL*>(buffer)->BindToSlot(slot);
+    }
+}
+
+void RenderContextGL::BindTexture(ITextureImpl* texture, uint32_t slot) {
+    LR_LOG_TRACE_F("OpenGL BindTexture: %p, slot=%u", texture, slot);
+    if (texture) {
+        texture->Bind(slot);
+    }
+}
+
 void RenderContextGL::DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) {
+    LR_LOG_TRACE_F("OpenGL DrawArrays: type=%d, start=%u, count=%u", (int)primitiveType, vertexStart, vertexCount);
     GLenum mode = gl::ToGLPrimitiveType(primitiveType);
     glDrawArrays(mode, vertexStart, vertexCount);
 }
 
 void RenderContextGL::DrawElements(PrimitiveType primitiveType, uint32_t indexCount,
                                   IndexType indexType, size_t indexOffset) {
+    LR_LOG_TRACE_F("OpenGL DrawElements: type=%d, count=%u, indexType=%d, offset=%zu", (int)primitiveType, indexCount, (int)indexType, indexOffset);
     GLenum mode = gl::ToGLPrimitiveType(primitiveType);
     GLenum type = gl::ToGLIndexType(indexType);
     glDrawElements(mode, indexCount, type, reinterpret_cast<const void*>(indexOffset));

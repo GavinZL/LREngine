@@ -421,7 +421,7 @@ int main()
         pipelineDesc.depthStencilState.depthCompareFunc = CompareFunc::Less;
         
         // 背面剔除（正面朝向逆时针）
-        pipelineDesc.rasterizerState.cullMode = CullMode::Front;
+        pipelineDesc.rasterizerState.cullMode = CullMode::Back;
         pipelineDesc.rasterizerState.frontFace = FrontFace::CCW;
         
         pipelineDesc.debugName = "CubePipeline";
@@ -472,13 +472,13 @@ int main()
             Uniforms uniforms;
             
             // 模型矩阵 - 旋转立方体
-            uniforms.modelMatrix = Mat4::rotateY(rotationAngle) * Mat4::rotateX(rotationAngle * 0.5f);
+            uniforms.modelMatrix = Mat4::rotateY(rotationAngle) * Mat4::rotateX(rotationAngle * 0.5f).transpose();
             
             // 视图矩阵 - 相机位置（从外部观察立方体）
             Vec3 eye(0.0f, 0.0f, 3.0f);  // 相机在立方体前方，距离3个单位
             Vec3 center(0.0f, 0.0f, 0.0f);  // 看向立方体中心
             Vec3 up(0.0f, 1.0f, 0.0f);
-            uniforms.viewMatrix = Mat4::lookAt(eye, center, up);
+            uniforms.viewMatrix = Mat4::lookAt(eye, center, up).transpose();
             
             // 投影矩阵 - 透视投影（far改回100，避免深度精度问题）
             float aspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);

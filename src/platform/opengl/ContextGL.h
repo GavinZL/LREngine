@@ -47,6 +47,12 @@ public:
     void SetScissor(int32_t x, int32_t y, int32_t width, int32_t height) override;
     void Clear(uint8_t flags, const float* color, float depth, uint8_t stencil) override;
     
+    void BindPipelineState(IPipelineStateImpl* pipelineState) override;
+    void BindVertexBuffer(IBufferImpl* buffer, uint32_t slot) override;
+    void BindIndexBuffer(IBufferImpl* buffer) override;
+    void BindUniformBuffer(IBufferImpl* buffer, uint32_t slot) override;
+    void BindTexture(ITextureImpl* texture, uint32_t slot) override;
+    
     void DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) override;
     void DrawElements(PrimitiveType primitiveType, uint32_t indexCount, 
                      IndexType indexType, size_t indexOffset) override;
