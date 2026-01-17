@@ -87,33 +87,54 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
     // 设置Metal层（如果提供了窗口句柄）
     if (m_windowHandle) {
         #if TARGET_OS_IPHONE || TARGET_OS_IOS
-            // iOS平台: 使用UIWindow和UIView
-            UIWindow* window = (__bridge UIWindow*)m_windowHandle;
-            UIView* contentView = [window rootViewController].view;
+            // iOS平台: 检测传入的对象类型
+            id windowHandle = (__bridge id)m_windowHandle;
             
-            if (!contentView) {
-                contentView = window;
+            // 检查是否直接传入了CAMetalLayer
+            if ([windowHandle isKindOfClass:[CAMetalLayer class]]) {
+                // 直接使用传入的CAMetalLayer（适用于iOS应用直接集成）
+                m_metalLayer = (CAMetalLayer*)windowHandle;
+                m_metalLayer.device = m_device;
+                m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+                m_metalLayer.framebufferOnly = YES;
+                
+                LR_LOG_INFO_F("Metal: Using provided CAMetalLayer directly");
             }
-            
-            // 设置CAMetalLayer
-            m_metalLayer = [CAMetalLayer layer];
-            m_metalLayer.device = m_device;
-            m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-            m_metalLayer.framebufferOnly = YES;
-            
-            // iOS使用UIScreen的scale
-            CGFloat scale = [UIScreen mainScreen].nativeScale;
-            m_metalLayer.contentsScale = scale;
-            m_metalLayer.drawableSize = CGSizeMake(m_width * scale, m_height * scale);
-            
-            // iOS不支持displaySyncEnabled属性
-            // 在iOS上，垂直同步由系统自动处理，无需手动设置
-            
-            // 设置layer的frame
-            m_metalLayer.frame = contentView.bounds;
-            
-            // 添加到视图层次
-            [contentView.layer addSublayer:m_metalLayer];
+            else if ([windowHandle isKindOfClass:[UIWindow class]]) {
+                // 传统方式: 使用UIWindow和UIView
+                UIWindow* window = (UIWindow*)windowHandle;
+                UIView* contentView = [window rootViewController].view;
+                
+                if (!contentView) {
+                    contentView = window;
+                }
+                
+                // 创建新的CAMetalLayer
+                m_metalLayer = [CAMetalLayer layer];
+                m_metalLayer.device = m_device;
+                m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+                m_metalLayer.framebufferOnly = YES;
+                
+                // iOS使用UIScreen的scale
+                CGFloat scale = [UIScreen mainScreen].nativeScale;
+                m_metalLayer.contentsScale = scale;
+                m_metalLayer.drawableSize = CGSizeMake(m_width * scale, m_height * scale);
+                
+                // iOS不支持displaySyncEnabled属性
+                // 在iOS上，垂直同步由系统自动处理，无需手动设置
+                
+                // 设置layer的frame
+                m_metalLayer.frame = contentView.bounds;
+                
+                // 添加到视图层次
+                [contentView.layer addSublayer:m_metalLayer];
+                
+                LR_LOG_INFO_F("Metal: Created CAMetalLayer from UIWindow");
+            }
+            else {
+                LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid window handle type for iOS platform");
+                return false;
+            }
             
         #else
             // macOS平台: 使用NSWindow和NSView
