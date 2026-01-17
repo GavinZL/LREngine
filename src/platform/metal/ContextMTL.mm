@@ -106,12 +106,8 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
             m_metalLayer.contentsScale = scale;
             m_metalLayer.drawableSize = CGSizeMake(m_width * scale, m_height * scale);
             
-            // iOS不支持displaySyncEnabled，使用presentationEnabled
-            #if defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
-                if (@available(iOS 13.0, *)) {
-                    m_metalLayer.displaySyncEnabled = m_vsync;
-                }
-            #endif
+            // iOS不支持displaySyncEnabled属性
+            // 在iOS上，垂直同步由系统自动处理，无需手动设置
             
             // 设置layer的frame
             m_metalLayer.frame = contentView.bounds;

@@ -181,7 +181,17 @@ inline MTLSamplerAddressMode ToMTLSamplerAddressMode(WrapMode mode) {
         case WrapMode::Repeat:         return MTLSamplerAddressModeRepeat;
         case WrapMode::ClampToEdge:    return MTLSamplerAddressModeClampToEdge;
         case WrapMode::MirroredRepeat: return MTLSamplerAddressModeMirrorRepeat;
-        case WrapMode::ClampToBorder:  return MTLSamplerAddressModeClampToBorderColor;
+        case WrapMode::ClampToBorder:
+            // ClampToBorder需要iOS 14.0+，对于iOS 13.0降级为ClampToEdge
+            #if TARGET_OS_IPHONE
+                if (@available(iOS 14.0, *)) {
+                    return MTLSamplerAddressModeClampToBorderColor;
+                } else {
+                    return MTLSamplerAddressModeClampToEdge;
+                }
+            #else
+                return MTLSamplerAddressModeClampToBorderColor;
+            #endif
         default:                       return MTLSamplerAddressModeRepeat;
     }
 }
