@@ -114,6 +114,7 @@ void TextureMTL::Destroy() {
 
 void TextureMTL::UpdateData(const void* data, uint32_t mipLevel, const TextureRegion* region) {
     if (!m_texture || !data) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Texture or data is null");
         return;
     }
 
@@ -150,6 +151,7 @@ void TextureMTL::UpdateData(const void* data, uint32_t mipLevel, const TextureRe
 
 void TextureMTL::GenerateMipmaps() {
     if (!m_texture || m_mipLevels <= 1) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Texture is null or has only one mipmap level");
         return;
     }
 

@@ -200,6 +200,7 @@ void ShaderProgramMTL::Use() {
 
 int32_t ShaderProgramMTL::GetUniformLocation(const char* name) {
     if (!name) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Uniform name is null");
         return -1;
     }
 
@@ -228,6 +229,7 @@ int32_t ShaderProgramMTL::GetUniformLocation(const char* name) {
 
 void ShaderProgramMTL::SetUniform1i(int32_t location, int32_t value) {
     if (location < 0 || static_cast<size_t>(location) >= m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location");
         return;
     }
     
@@ -237,6 +239,7 @@ void ShaderProgramMTL::SetUniform1i(int32_t location, int32_t value) {
 
 void ShaderProgramMTL::SetUniform1f(int32_t location, float value) {
     if (location < 0 || static_cast<size_t>(location) >= m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location");
         return;
     }
     
@@ -246,6 +249,7 @@ void ShaderProgramMTL::SetUniform1f(int32_t location, float value) {
 
 void ShaderProgramMTL::SetUniform2f(int32_t location, float x, float y) {
     if (location < 0 || static_cast<size_t>(location + 8) > m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location");
         return;
     }
     
@@ -256,6 +260,7 @@ void ShaderProgramMTL::SetUniform2f(int32_t location, float x, float y) {
 
 void ShaderProgramMTL::SetUniform3f(int32_t location, float x, float y, float z) {
     if (location < 0 || static_cast<size_t>(location + 12) > m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location");
         return;
     }
     
@@ -266,6 +271,7 @@ void ShaderProgramMTL::SetUniform3f(int32_t location, float x, float y, float z)
 
 void ShaderProgramMTL::SetUniform4f(int32_t location, float x, float y, float z, float w) {
     if (location < 0 || static_cast<size_t>(location + 16) > m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location");
         return;
     }
     
@@ -278,6 +284,7 @@ void ShaderProgramMTL::SetUniformMatrix3fv(int32_t location, const float* value,
     LR_UNUSED(transpose);
     
     if (location < 0 || !value || static_cast<size_t>(location + 36) > m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location or value");
         return;
     }
     
@@ -289,6 +296,7 @@ void ShaderProgramMTL::SetUniformMatrix4fv(int32_t location, const float* value,
     LR_UNUSED(transpose);
     
     if (location < 0 || !value || static_cast<size_t>(location + 64) > m_uniformData.size()) {
+        LR_SET_ERROR(ErrorCode::InvalidArgument, "Invalid uniform location or value");
         return;
     }
     
@@ -315,6 +323,7 @@ void ShaderProgramMTL::CreateUniformBuffer() {
 
 void ShaderProgramMTL::UpdateUniforms() {
     if (!m_uniformBuffer || m_uniformData.empty()) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Invalid uniform buffer or data");
         return;
     }
     

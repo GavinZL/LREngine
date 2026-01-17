@@ -474,9 +474,9 @@ int main()
             // 模型矩阵 - 旋转立方体
             uniforms.modelMatrix = Mat4::rotateY(rotationAngle) * Mat4::rotateX(rotationAngle * 0.5f);
             
-            // 视图矩阵 - 相机位置
-            Vec3 eye(0.0f, 0.0f, 1.0f);  // 测试：相机远离立方
-            Vec3 center(0.0f, 0.0f, 0.0f);
+            // 视图矩阵 - 相机位置（从外部观察立方体）
+            Vec3 eye(0.0f, 0.0f, 3.0f);  // 相机在立方体前方，距离3个单位
+            Vec3 center(0.0f, 0.0f, 0.0f);  // 看向立方体中心
             Vec3 up(0.0f, 1.0f, 0.0f);
             uniforms.viewMatrix = Mat4::lookAt(eye, center, up);
             
@@ -498,7 +498,7 @@ int main()
             // 更新Uniform缓冲区
             uniformBuffer->UpdateData(&uniforms, sizeof(Uniforms), 0);
 
-            // 开始帧
+            // 开始帧，创建 commandBufferEncoder
             context->BeginFrame();
 
             // 清除屏幕

@@ -533,16 +533,20 @@ void RenderContextMTL::SetTexture(TextureMTL* texture, uint32_t slot) {
         // 绑定纹理到片段着色器
         [m_currentRenderEncoder setFragmentTexture:mtlTexture atIndex:slot];
         
-        // 创建默认采样器（线性过滤）
-        MTLSamplerDescriptor* samplerDesc = [[MTLSamplerDescriptor alloc] init];
-        samplerDesc.minFilter = MTLSamplerMinMagFilterLinear;
-        samplerDesc.magFilter = MTLSamplerMinMagFilterLinear;
-        samplerDesc.mipFilter = MTLSamplerMipFilterNotMipmapped;
-        samplerDesc.sAddressMode = MTLSamplerAddressModeRepeat;
-        samplerDesc.tAddressMode = MTLSamplerAddressModeRepeat;
-        samplerDesc.rAddressMode = MTLSamplerAddressModeRepeat;
-        
-        id<MTLSamplerState> samplerState = [m_device newSamplerStateWithDescriptor:samplerDesc];
+        id<MTLSamplerState> samplerState = texture->GetSampler();
+        // 如果Texture中没有采样器，创建默认采样器（线性过滤）
+        if (!samplerState){
+            MTLSamplerDescriptor* samplerDesc = [[MTLSamplerDescriptor alloc] init];
+            samplerDesc.minFilter = MTLSamplerMinMagFilterLinear;
+            samplerDesc.magFilter = MTLSamplerMinMagFilterLinear;
+            samplerDesc.mipFilter = MTLSamplerMipFilterNotMipmapped;
+            samplerDesc.sAddressMode = MTLSamplerAddressModeRepeat;
+            samplerDesc.tAddressMode = MTLSamplerAddressModeRepeat;
+            samplerDesc.rAddressMode = MTLSamplerAddressModeRepeat;
+            
+            samplerState = [m_device newSamplerStateWithDescriptor:samplerDesc];
+        }
+
         [m_currentRenderEncoder setFragmentSamplerState:samplerState atIndex:slot];
         LR_LOG_INFO_F("Metal: Sampler state created and bound to slot %u", slot);
     } else {

@@ -73,6 +73,7 @@ void BufferMTL::Destroy() {
 
 void BufferMTL::UpdateData(const void* data, size_t size, size_t offset) {
     if (!m_buffer || !data) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Buffer or data is null");
         return;
     }
 
@@ -91,6 +92,7 @@ void* BufferMTL::Map(MemoryAccess access) {
     LR_UNUSED(access);
     
     if (!m_buffer) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Buffer is null");
         return nullptr;
     }
 
@@ -147,6 +149,7 @@ VertexBufferMTL::~VertexBufferMTL() = default;
 
 bool VertexBufferMTL::Create(const BufferDescriptor& desc) {
     if (!BufferMTL::Create(desc)) {
+        LR_SET_ERROR(ErrorCode::ResourceCreationFailed, "Failed to create vertex buffer");
         return false;
     }
     

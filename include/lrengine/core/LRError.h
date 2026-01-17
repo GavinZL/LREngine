@@ -28,6 +28,7 @@ enum class ErrorCode : int32_t {
     NotImplemented = 6,
     NotInitialized = 7,
     AlreadyInitialized = 8,
+    InvalidState = 9,
     
     // 设备错误 (100-199)
     DeviceCreationFailed = 100,
