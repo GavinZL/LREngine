@@ -98,3 +98,33 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/examples
     )
 endif()
+
+# RenderToTextureMTL示例 (Metal - 离屏渲染)
+if(LRENGINE_ENABLE_METAL AND APPLE)
+    add_executable(RenderToTextureMTL
+        RenderToTextureMTL/main.mm
+    )
+
+    target_link_libraries(RenderToTextureMTL PRIVATE
+        lrengine
+        glfw
+        "-framework Metal"
+        "-framework QuartzCore"
+        "-framework Cocoa"
+    )
+
+    target_include_directories(RenderToTextureMTL PRIVATE
+        ${LRENGINE_INCLUDE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party
+    )
+
+    # 设置Objective-C++编译选项
+    set_source_files_properties(RenderToTextureMTL/main.mm PROPERTIES
+        COMPILE_FLAGS "-fobjc-arc"
+    )
+
+    # 设置输出目录
+    set_target_properties(RenderToTextureMTL PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/examples
+    )
+endif()

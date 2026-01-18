@@ -295,6 +295,10 @@ int main()
             // 清除屏幕（深蓝色背景，展示Metal渲染）
             context->Clear(ClearFlag_Color | ClearFlag_Depth, 0.1f, 0.2f, 0.4f, 1.0f, 1.0f, 0);
 
+            // 开始渲染通道（Metal必需！）
+            // nullptr表示渲染到默认framebuffer（屏幕）
+            context->BeginRenderPass(nullptr);
+
             // 使用着色器程序
             shaderProgram->Use();
 
@@ -304,6 +308,9 @@ int main()
             // 绑定顶点缓冲区并绘制
             context->SetVertexBuffer(vertexBuffer, 0);
             context->Draw(0, 3);
+
+            // 结束渲染通道
+            context->EndRenderPass();
 
             // 结束帧并呈现
             context->EndFrame();

@@ -68,10 +68,8 @@ void LRFrameBuffer::AttachColorTexture(LRTexture* texture, uint32_t index) {
     
     mColorTextures[index] = texture;
     
-    // 获取纹理实现并附加
-    // 注意：这里需要从LRTexture获取ITextureImpl，但LRTexture没有暴露mImpl
-    // 实际实现中需要友元或其他方式访问
-    // mImpl->AttachColorTexture(texture ? texture->GetImpl() : nullptr, index);
+    // 将纹理附加到平台实现
+    mImpl->AttachColorTexture(texture ? texture->GetImpl() : nullptr, index);
 }
 
 void LRFrameBuffer::AttachDepthTexture(LRTexture* texture) {
@@ -81,6 +79,9 @@ void LRFrameBuffer::AttachDepthTexture(LRTexture* texture) {
     }
     
     mDepthTexture = texture;
+    
+    // 将深度纹理附加到平台实现
+    mImpl->AttachDepthTexture(texture ? texture->GetImpl() : nullptr);
 }
 
 void LRFrameBuffer::AttachStencilTexture(LRTexture* texture) {

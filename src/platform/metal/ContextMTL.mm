@@ -1,6 +1,13 @@
 /**
  * @file ContextMTL.mm
- * @brief Metal渲染上下文实现
+ * @brief Metal渲染上下文实现（重构版）
+ * 
+ * 重构特性：
+ * - 支持多渲染目标(MRT)
+ * - 支持多线程命令记录
+ * - 使用RenderPass抽象管理渲染流程
+ * - 使用CommandBufferPool提升性能
+ * - 使用RenderStateStack支持嵌套渲染
  */
 
 #include "ContextMTL.h"
@@ -14,6 +21,9 @@
 #include "PipelineStateMTL.h"
 #include "FenceMTL.h"
 #include "TypeConverterMTL.h"
+#include "RenderPassMTL.h"
+#include "CommandBufferPoolMTL.h"
+#include "RenderStateStackMTL.h"
 #include "lrengine/core/LRError.h"
 #include "lrengine/utils/LRLog.h"
 
@@ -28,11 +38,13 @@ namespace lrengine {
 namespace render {
 namespace mtl {
 
+// =============================================================================
+// 构造和析构
+// =============================================================================
+
 RenderContextMTL::RenderContextMTL()
     : m_device(nil)
     , m_commandQueue(nil)
-    , m_currentCommandBuffer(nil)
-    , m_currentRenderEncoder(nil)
     , m_metalLayer(nil)
     , m_currentDrawable(nil)
     , m_depthStencilTexture(nil)
@@ -62,6 +74,10 @@ RenderContextMTL::RenderContextMTL()
 RenderContextMTL::~RenderContextMTL() {
     Shutdown();
 }
+
+// =============================================================================
+// 初始化和清理
+// =============================================================================
 
 bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
     m_windowHandle = desc.windowHandle;
@@ -120,9 +136,6 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
                 m_metalLayer.contentsScale = scale;
                 m_metalLayer.drawableSize = CGSizeMake(m_width * scale, m_height * scale);
                 
-                // iOS不支持displaySyncEnabled属性
-                // 在iOS上，垂直同步由系统自动处理，无需手动设置
-                
                 // 设置layer的frame
                 m_metalLayer.frame = contentView.bounds;
                 
@@ -159,6 +172,12 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
 
     // 创建深度/模板纹理
     CreateDepthStencilTexture();
+    
+    // 初始化CommandBuffer池
+    m_commandBufferPool = std::make_unique<CommandBufferPoolMTL>(m_commandQueue, 3);
+    
+    // 初始化状态栈
+    m_stateStack = std::make_unique<RenderStateStackMTL>();
 
     // 设置默认视口
     m_viewport.originX = 0;
@@ -173,23 +192,36 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
     m_scissorRect.width = m_width;
     m_scissorRect.height = m_height;
 
+    LR_LOG_INFO_F("ContextMTL: Initialized successfully (%ux%u)", m_width, m_height);
     return true;
 }
 
 void RenderContextMTL::Shutdown() {
-    EndCurrentRenderEncoder();
+    LR_LOG_INFO_F("ContextMTL: Shutting down...");
     
-    if (m_currentCommandBuffer) {
-        [m_currentCommandBuffer commit];
-        [m_currentCommandBuffer waitUntilCompleted];
-        m_currentCommandBuffer = nil;
+    // 清空状态栈
+    if (m_stateStack) {
+        m_stateStack->Clear();
     }
+    
+    // 等待所有CommandBuffer完成
+    if (m_commandBufferPool) {
+        m_commandBufferPool->WaitIdle();
+    }
+    
+    // 清理资源
+    m_currentRenderPass.reset();
+    m_defaultRenderPass.reset();
+    m_stateStack.reset();
+    m_commandBufferPool.reset();
     
     m_depthStencilTexture = nil;
     m_currentDrawable = nil;
     m_metalLayer = nil;
     m_commandQueue = nil;
     m_device = nil;
+    
+    LR_LOG_INFO_F("ContextMTL: Shutdown completed");
 }
 
 void RenderContextMTL::MakeCurrent() {
@@ -200,6 +232,10 @@ void RenderContextMTL::SwapBuffers() {
     EndFrame();
     BeginFrame();
 }
+
+// =============================================================================
+// 资源创建
+// =============================================================================
 
 IBufferImpl* RenderContextMTL::CreateBufferImpl(BufferType type) {
     switch (type) {
@@ -227,6 +263,7 @@ ITextureImpl* RenderContextMTL::CreateTextureImpl() {
 }
 
 IFrameBufferImpl* RenderContextMTL::CreateFrameBufferImpl() {
+    // 不再传递context指针，解除循环依赖
     return new FrameBufferMTL(m_device);
 }
 
@@ -238,6 +275,10 @@ IFenceImpl* RenderContextMTL::CreateFenceImpl() {
     return new FenceMTL(m_device);
 }
 
+// =============================================================================
+// 视口和裁剪
+// =============================================================================
+
 void RenderContextMTL::SetViewport(int32_t x, int32_t y, int32_t width, int32_t height) {
     m_viewport.originX = x;
     m_viewport.originY = y;
@@ -245,8 +286,12 @@ void RenderContextMTL::SetViewport(int32_t x, int32_t y, int32_t width, int32_t 
     m_viewport.height = height;
     m_viewportDirty = true;
     
-    if (m_currentRenderEncoder) {
-        [m_currentRenderEncoder setViewport:m_viewport];
+    // 应用到当前encoder
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder) {
+            [state.encoder setViewport:m_viewport];
+        }
     }
 }
 
@@ -257,13 +302,21 @@ void RenderContextMTL::SetScissor(int32_t x, int32_t y, int32_t width, int32_t h
     m_scissorRect.height = height;
     m_scissorDirty = true;
     
-    if (m_currentRenderEncoder) {
-        [m_currentRenderEncoder setScissorRect:m_scissorRect];
+    // 应用到当前encoder
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder) {
+            [state.encoder setScissorRect:m_scissorRect];
+        }
     }
 }
 
+// =============================================================================
+// 清除操作
+// =============================================================================
+
 void RenderContextMTL::Clear(uint8_t flags, const float* color, float depth, uint8_t stencil) {
-    LR_LOG_INFO_F("Metal: Clear called with flags: %u", flags);
+    LR_LOG_TRACE_F("ContextMTL: Clear called with flags: %u", flags);
     
     if (flags & ClearColor && color) {
         m_clearColor[0] = color[0];
@@ -280,31 +333,32 @@ void RenderContextMTL::Clear(uint8_t flags, const float* color, float depth, uin
         m_clearStencil = stencil;
     }
     
-    // 不销毁当前render encoder，清除值会在下次创建时使用
-    // 如果需要立即应用清除，可以销毁并重新创建encoder
-    // EndCurrentRenderEncoder();  // 注释掉，保持encoder存活
+    // 注意：在Metal中，清除值在创建RenderPassDescriptor时应用
+    // 如果需要在渲染中途清除，需要结束当前pass并重新开始
 }
+
+// =============================================================================
+// 状态绑定
+// =============================================================================
 
 void RenderContextMTL::BindPipelineState(IPipelineStateImpl* pipelineState) {
     m_currentPipelineState = static_cast<PipelineStateMTL*>(pipelineState);
     
-    LR_LOG_INFO_F("Metal: Binding pipeline state");
+    LR_LOG_TRACE_F("ContextMTL: Binding pipeline state");
     
-    if (m_currentRenderEncoder && m_currentPipelineState) {
-        if (m_currentPipelineState->GetPipelineState()) {
-            [m_currentRenderEncoder setRenderPipelineState:m_currentPipelineState->GetPipelineState()];
-            LR_LOG_INFO_F("Metal: Pipeline state bound to render encoder");
-        }
-        if (m_currentPipelineState->GetDepthStencilState()) {
-            [m_currentRenderEncoder setDepthStencilState:m_currentPipelineState->GetDepthStencilState()];
-            LR_LOG_INFO_F("Metal: Depth stencil state bound");
-        }
-        [m_currentRenderEncoder setCullMode:m_currentPipelineState->GetCullMode()];
-        [m_currentRenderEncoder setFrontFacingWinding:m_currentPipelineState->GetFrontFace()];
-        [m_currentRenderEncoder setTriangleFillMode:m_currentPipelineState->GetFillMode()];
-    } else {
-        if (!m_currentRenderEncoder) {
-            LR_LOG_WARNING_F("Metal: Cannot bind pipeline state - no render encoder");
+    // 应用到当前encoder
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder && m_currentPipelineState) {
+            if (m_currentPipelineState->GetPipelineState()) {
+                [state.encoder setRenderPipelineState:m_currentPipelineState->GetPipelineState()];
+            }
+            if (m_currentPipelineState->GetDepthStencilState()) {
+                [state.encoder setDepthStencilState:m_currentPipelineState->GetDepthStencilState()];
+            }
+            [state.encoder setCullMode:m_currentPipelineState->GetCullMode()];
+            [state.encoder setFrontFacingWinding:m_currentPipelineState->GetFrontFace()];
+            [state.encoder setTriangleFillMode:m_currentPipelineState->GetFillMode()];
         }
     }
 }
@@ -312,15 +366,13 @@ void RenderContextMTL::BindPipelineState(IPipelineStateImpl* pipelineState) {
 void RenderContextMTL::BindVertexBuffer(IBufferImpl* buffer, uint32_t slot) {
     m_currentVertexBuffer = static_cast<VertexBufferMTL*>(buffer);
     
-    if (m_currentRenderEncoder && m_currentVertexBuffer && m_currentVertexBuffer->GetBuffer()) {
-        LR_LOG_INFO_F("Metal: Binding vertex buffer to slot %u, buffer size: %zu", 
-                    slot, m_currentVertexBuffer->GetSize());
-        [m_currentRenderEncoder setVertexBuffer:m_currentVertexBuffer->GetBuffer()
-                                         offset:0
-                                        atIndex:slot];
-    } else {
-        if (!m_currentRenderEncoder) {
-            LR_LOG_WARNING_F("Metal: Cannot bind vertex buffer - no render encoder");
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder && m_currentVertexBuffer && m_currentVertexBuffer->GetBuffer()) {
+            LR_LOG_TRACE_F("ContextMTL: Binding vertex buffer to slot %u", slot);
+            [state.encoder setVertexBuffer:m_currentVertexBuffer->GetBuffer()
+                                     offset:0
+                                    atIndex:slot];
         }
     }
 }
@@ -339,132 +391,145 @@ void RenderContextMTL::BindTexture(ITextureImpl* texture, uint32_t slot) {
     SetTexture(textureMTL, slot);
 }
 
+// =============================================================================
+// 绘制命令
+// =============================================================================
+
 void RenderContextMTL::DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) {
-    EnsureRenderEncoder();
-    
-    if (!m_currentRenderEncoder) {
-        LR_LOG_ERROR_F("Metal: Cannot draw - no render encoder");
+    if (m_stateStack->IsEmpty()) {
+        LR_LOG_ERROR_F("ContextMTL: DrawArrays called but no active render pass");
         return;
     }
     
-    LR_LOG_INFO_F("Metal: DrawArrays - vertexStart: %u, vertexCount: %u", vertexStart, vertexCount);
+    auto& state = m_stateStack->GetCurrentState();
+    if (!state.encoder) {
+        LR_LOG_ERROR_F("ContextMTL: DrawArrays called but no render encoder");
+        return;
+    }
+    
+    LR_LOG_TRACE_F("ContextMTL: DrawArrays - start: %u, count: %u", vertexStart, vertexCount);
     
     MTLPrimitiveType type = ToMTLPrimitiveType(primitiveType);
-    [m_currentRenderEncoder drawPrimitives:type
-                               vertexStart:vertexStart
-                               vertexCount:vertexCount];
+    [state.encoder drawPrimitives:type
+                       vertexStart:vertexStart
+                       vertexCount:vertexCount];
 }
 
 void RenderContextMTL::DrawElements(PrimitiveType primitiveType, uint32_t indexCount,
                                    IndexType indexType, size_t indexOffset) {
-    EnsureRenderEncoder();
+    if (m_stateStack->IsEmpty()) {
+        LR_LOG_ERROR_F("ContextMTL: DrawElements called but no active render pass");
+        return;
+    }
     
-    if (!m_currentRenderEncoder || !m_currentIndexBuffer) {
+    auto& state = m_stateStack->GetCurrentState();
+    if (!state.encoder || !m_currentIndexBuffer) {
+        LR_LOG_ERROR_F("ContextMTL: DrawElements called but no render encoder or index buffer");
         return;
     }
     
     MTLPrimitiveType type = ToMTLPrimitiveType(primitiveType);
     MTLIndexType mtlIndexType = ToMTLIndexType(indexType);
     
-    [m_currentRenderEncoder drawIndexedPrimitives:type
-                                       indexCount:indexCount
-                                        indexType:mtlIndexType
-                                      indexBuffer:m_currentIndexBuffer->GetBuffer()
-                                indexBufferOffset:indexOffset];
+    [state.encoder drawIndexedPrimitives:type
+                               indexCount:indexCount
+                                indexType:mtlIndexType
+                              indexBuffer:m_currentIndexBuffer->GetBuffer()
+                        indexBufferOffset:indexOffset];
 }
 
 void RenderContextMTL::DrawArraysInstanced(PrimitiveType primitiveType, uint32_t vertexStart,
                                           uint32_t vertexCount, uint32_t instanceCount) {
-    EnsureRenderEncoder();
+    if (m_stateStack->IsEmpty()) {
+        LR_LOG_ERROR_F("ContextMTL: DrawArraysInstanced called but no active render pass");
+        return;
+    }
     
-    if (!m_currentRenderEncoder) {
+    auto& state = m_stateStack->GetCurrentState();
+    if (!state.encoder) {
         return;
     }
     
     MTLPrimitiveType type = ToMTLPrimitiveType(primitiveType);
-    [m_currentRenderEncoder drawPrimitives:type
-                               vertexStart:vertexStart
-                               vertexCount:vertexCount
-                             instanceCount:instanceCount];
+    [state.encoder drawPrimitives:type
+                       vertexStart:vertexStart
+                       vertexCount:vertexCount
+                     instanceCount:instanceCount];
 }
 
 void RenderContextMTL::DrawElementsInstanced(PrimitiveType primitiveType, uint32_t indexCount,
                                             IndexType indexType, size_t indexOffset,
                                             uint32_t instanceCount) {
-    EnsureRenderEncoder();
+    if (m_stateStack->IsEmpty()) {
+        LR_LOG_ERROR_F("ContextMTL: DrawElementsInstanced called but no active render pass");
+        return;
+    }
     
-    if (!m_currentRenderEncoder || !m_currentIndexBuffer) {
+    auto& state = m_stateStack->GetCurrentState();
+    if (!state.encoder || !m_currentIndexBuffer) {
         return;
     }
     
     MTLPrimitiveType type = ToMTLPrimitiveType(primitiveType);
     MTLIndexType mtlIndexType = ToMTLIndexType(indexType);
     
-    [m_currentRenderEncoder drawIndexedPrimitives:type
-                                       indexCount:indexCount
-                                        indexType:mtlIndexType
-                                      indexBuffer:m_currentIndexBuffer->GetBuffer()
-                                indexBufferOffset:indexOffset
-                                    instanceCount:instanceCount];
+    [state.encoder drawIndexedPrimitives:type
+                               indexCount:indexCount
+                                indexType:mtlIndexType
+                              indexBuffer:m_currentIndexBuffer->GetBuffer()
+                        indexBufferOffset:indexOffset
+                            instanceCount:instanceCount];
 }
 
+// =============================================================================
+// 同步操作
+// =============================================================================
+
 void RenderContextMTL::WaitIdle() {
-    EndCurrentRenderEncoder();
-    
-    if (m_currentCommandBuffer) {
-        [m_currentCommandBuffer commit];
-        [m_currentCommandBuffer waitUntilCompleted];
-        m_currentCommandBuffer = nil;
+    if (m_commandBufferPool) {
+        m_commandBufferPool->WaitIdle();
     }
 }
 
 void RenderContextMTL::Flush() {
-    EndCurrentRenderEncoder();
-    
-    if (m_currentCommandBuffer) {
-        [m_currentCommandBuffer commit];
-        m_currentCommandBuffer = nil;
-    }
+    // Metal的flush操作通过commit CommandBuffer实现
+    // 在EndFrame时自动执行
 }
 
-id<MTLCommandBuffer> RenderContextMTL::GetCurrentCommandBuffer() {
-    if (!m_currentCommandBuffer) {
-        m_currentCommandBuffer = [m_commandQueue commandBuffer];
-    }
-    return m_currentCommandBuffer;
-}
-
-id<MTLRenderCommandEncoder> RenderContextMTL::GetCurrentRenderEncoder() {
-    EnsureRenderEncoder();
-    return m_currentRenderEncoder;
-}
+// =============================================================================
+// 帧控制
+// =============================================================================
 
 void RenderContextMTL::BeginFrame() {
     if (m_frameStarted) {
+        LR_LOG_WARNING_F("ContextMTL: BeginFrame called but frame already started");
         return;
     }
     
-    LR_LOG_INFO_F("Metal: BeginFrame called");
+    LR_LOG_TRACE_F("ContextMTL: BeginFrame");
     
-    // 先设置标志，以便EnsureRenderEncoder可以正常工作
+    // 先设置标志
     m_frameStarted = true;
     
     // 获取下一个drawable
     if (m_metalLayer) {
         m_currentDrawable = [m_metalLayer nextDrawable];
-        if (m_currentDrawable) {
-            LR_LOG_INFO_F("Metal: Drawable acquired in BeginFrame, texture size: %lux%lu", 
-                        (unsigned long)m_currentDrawable.texture.width, 
-                        (unsigned long)m_currentDrawable.texture.height);
-        } else {
-            LR_LOG_ERROR_F("Metal: Failed to acquire drawable in BeginFrame");
-            m_frameStarted = false;  // 回退标志
+        if (!m_currentDrawable) {
+            LR_LOG_ERROR_F("ContextMTL: Failed to acquire drawable");
+            m_frameStarted = false;
             return;
         }
+        
+        LR_LOG_TRACE_F("ContextMTL: Drawable acquired (%lux%lu)",
+                    (unsigned long)m_currentDrawable.texture.width,
+                    (unsigned long)m_currentDrawable.texture.height);
     }
     
-    // 立即创建render encoder，以便后续资源绑定
-    EnsureRenderEncoder();
+    // 关键修复：为整个帧创建一个CommandBuffer
+    if (m_commandBufferPool) {
+        m_frameCommandBuffer = m_commandBufferPool->AcquireCommandBuffer();
+        LR_LOG_INFO_F("ContextMTL: Frame CommandBuffer acquired: %p", m_frameCommandBuffer);
+    }
 }
 
 void RenderContextMTL::EndFrame() {
@@ -472,29 +537,76 @@ void RenderContextMTL::EndFrame() {
         return;
     }
     
-    LR_LOG_INFO_F("Metal: EndFrame called");
+    LR_LOG_TRACE_F("ContextMTL: EndFrame");
     
-    EndCurrentRenderEncoder();
+    // 确保所有RenderPass都已结束
+    if (!m_stateStack->IsEmpty()) {
+        LR_LOG_WARNING_F("ContextMTL: EndFrame called with %u active render passes, ending them",
+                       m_stateStack->GetDepth());
+        while (!m_stateStack->IsEmpty()) {
+            EndRenderPassEx();
+        }
+    }
     
-    if (m_currentCommandBuffer && m_currentDrawable) {
-        [m_currentCommandBuffer presentDrawable:m_currentDrawable];
-        [m_currentCommandBuffer commit];
-        m_currentCommandBuffer = nil;
+    // Present drawable
+    if (m_frameCommandBuffer && m_currentDrawable) {
+        [m_frameCommandBuffer presentDrawable:m_currentDrawable];
+        LR_LOG_INFO_F("ContextMTL: Presenting drawable");
+    }
+    
+    // 提交CommandBuffer（通过池的SubmitCommandBuffer来注册completion handler）
+    if (m_frameCommandBuffer && m_commandBufferPool) {
+        LR_LOG_INFO_F("ContextMTL: Submitting Frame CommandBuffer: %p", m_frameCommandBuffer);
+        m_commandBufferPool->SubmitCommandBuffer(m_frameCommandBuffer);
+        m_frameCommandBuffer = nil;
     }
     
     m_currentDrawable = nil;
-    m_frameStarted = false;  // 重置帧状态，允许下一帧开始
+    m_frameStarted = false;
     
-    LR_LOG_INFO_F("Metal: EndFrame completed, frame state reset");
+    LR_LOG_TRACE_F("ContextMTL: Frame ended");
+}
+
+// =============================================================================
+// Metal特有方法
+// =============================================================================
+
+id<MTLCommandBuffer> RenderContextMTL::GetCurrentCommandBuffer() {
+    if (!m_commandBufferPool) {
+        LR_LOG_ERROR_F("ContextMTL: CommandBufferPool not initialized");
+        return nil;
+    }
+    
+    // 关键修复：复用帧级别的CommandBuffer
+    if (m_frameCommandBuffer) {
+        return m_frameCommandBuffer;
+    }
+    
+    // 如果没有帧CommandBuffer，从池中获取新的
+    LR_LOG_WARNING_F("ContextMTL: GetCurrentCommandBuffer called but no frame CommandBuffer");
+    return m_commandBufferPool->AcquireCommandBuffer();
+}
+
+id<MTLRenderCommandEncoder> RenderContextMTL::GetCurrentRenderEncoder() {
+    if (m_stateStack->IsEmpty()) {
+        LR_LOG_WARNING_F("ContextMTL: GetCurrentRenderEncoder called but no active render pass");
+        return nil;
+    }
+    
+    auto& state = m_stateStack->GetCurrentState();
+    return state.encoder;
 }
 
 void RenderContextMTL::SetVertexBuffer(VertexBufferMTL* buffer, uint32_t index) {
     m_currentVertexBuffer = buffer;
     
-    if (m_currentRenderEncoder && buffer) {
-        [m_currentRenderEncoder setVertexBuffer:buffer->GetBuffer()
-                                         offset:0
-                                        atIndex:index];
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder && buffer) {
+            [state.encoder setVertexBuffer:buffer->GetBuffer()
+                                     offset:0
+                                    atIndex:index];
+        }
     }
 }
 
@@ -505,76 +617,230 @@ void RenderContextMTL::SetIndexBuffer(IndexBufferMTL* buffer) {
 void RenderContextMTL::SetPipelineState(PipelineStateMTL* pipelineState) {
     m_currentPipelineState = pipelineState;
     
-    if (m_currentRenderEncoder && pipelineState) {
-        [m_currentRenderEncoder setRenderPipelineState:pipelineState->GetPipelineState()];
-        [m_currentRenderEncoder setDepthStencilState:pipelineState->GetDepthStencilState()];
-        [m_currentRenderEncoder setCullMode:pipelineState->GetCullMode()];
-        [m_currentRenderEncoder setFrontFacingWinding:pipelineState->GetFrontFace()];
-        [m_currentRenderEncoder setTriangleFillMode:pipelineState->GetFillMode()];
-        
-        if (pipelineState->GetDepthBias() != 0 || pipelineState->GetDepthBiasSlopeFactor() != 0) {
-            [m_currentRenderEncoder setDepthBias:pipelineState->GetDepthBias()
-                                      slopeScale:pipelineState->GetDepthBiasSlopeFactor()
-                                           clamp:pipelineState->GetDepthBiasClamp()];
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder && pipelineState) {
+            [state.encoder setRenderPipelineState:pipelineState->GetPipelineState()];
+            [state.encoder setDepthStencilState:pipelineState->GetDepthStencilState()];
+            [state.encoder setCullMode:pipelineState->GetCullMode()];
+            [state.encoder setFrontFacingWinding:pipelineState->GetFrontFace()];
+            [state.encoder setTriangleFillMode:pipelineState->GetFillMode()];
+            
+            if (pipelineState->GetDepthBias() != 0 || pipelineState->GetDepthBiasSlopeFactor() != 0) {
+                [state.encoder setDepthBias:pipelineState->GetDepthBias()
+                                  slopeScale:pipelineState->GetDepthBiasSlopeFactor()
+                                       clamp:pipelineState->GetDepthBiasClamp()];
+            }
         }
     }
 }
 
 void RenderContextMTL::SetUniformBuffer(UniformBufferMTL* buffer, uint32_t index) {
-    if (m_currentRenderEncoder && buffer) {
-        LR_LOG_INFO_F("Metal: Binding uniform buffer to slot %u, buffer size: %zu", index, buffer->GetSize());
-        // 绑定到顶点着色器
-        [m_currentRenderEncoder setVertexBuffer:buffer->GetBuffer()
-                                         offset:0
-                                        atIndex:index];
-        // 绑定到片段着色器
-        [m_currentRenderEncoder setFragmentBuffer:buffer->GetBuffer()
-                                           offset:0
-                                          atIndex:index];
-    } else {
-        if (!m_currentRenderEncoder) {
-            LR_LOG_WARNING_F("Metal: Cannot bind uniform buffer - no render encoder");
-        }
-        if (!buffer) {
-            LR_LOG_WARNING_F("Metal: Cannot bind uniform buffer - buffer is null");
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder && buffer) {
+            LR_LOG_TRACE_F("ContextMTL: Binding uniform buffer to slot %u", index);
+            
+            // 关键修复：使用 setVertexBytes 而不是 setVertexBuffer
+            // 这会让Metal复制一份数据，避免后续 UpdateData 覆盖
+            void* contents = [buffer->GetBuffer() contents];
+            size_t size = buffer->GetSize();
+            
+            if (contents && size > 0) {
+                // 绑定到顶点着色器（复制数据）
+                [state.encoder setVertexBytes:contents
+                                        length:size
+                                       atIndex:index];
+                // 绑定到片段着色器（复制数据）
+                [state.encoder setFragmentBytes:contents
+                                          length:size
+                                         atIndex:index];
+                
+                LR_LOG_TRACE_F("ContextMTL: Copied %zu bytes to encoder at index %u", size, index);
+            }
         }
     }
 }
 
 void RenderContextMTL::SetTexture(TextureMTL* texture, uint32_t slot) {
-    if (m_currentRenderEncoder && texture) {
-        id<MTLTexture> mtlTexture = (__bridge id<MTLTexture>)texture->GetNativeHandle().ptr;
-        LR_LOG_INFO_F("Metal: Binding texture to slot %u, size: %lux%lu", slot, 
-                    mtlTexture.width, mtlTexture.height);
-        
-        // 绑定纹理到片段着色器
-        [m_currentRenderEncoder setFragmentTexture:mtlTexture atIndex:slot];
-        
-        id<MTLSamplerState> samplerState = texture->GetSampler();
-        // 如果Texture中没有采样器，创建默认采样器（线性过滤）
-        if (!samplerState){
-            MTLSamplerDescriptor* samplerDesc = [[MTLSamplerDescriptor alloc] init];
-            samplerDesc.minFilter = MTLSamplerMinMagFilterLinear;
-            samplerDesc.magFilter = MTLSamplerMinMagFilterLinear;
-            samplerDesc.mipFilter = MTLSamplerMipFilterNotMipmapped;
-            samplerDesc.sAddressMode = MTLSamplerAddressModeRepeat;
-            samplerDesc.tAddressMode = MTLSamplerAddressModeRepeat;
-            samplerDesc.rAddressMode = MTLSamplerAddressModeRepeat;
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder && texture) {
+            id<MTLTexture> mtlTexture = (__bridge id<MTLTexture>)texture->GetNativeHandle().ptr;
+            LR_LOG_INFO_F("ContextMTL: Binding texture %p (MTLTexture: %p) to slot %u", texture, mtlTexture, slot);
             
-            samplerState = [m_device newSamplerStateWithDescriptor:samplerDesc];
-        }
+            // 绑定纹理到片段着色器
+            [state.encoder setFragmentTexture:mtlTexture atIndex:slot];
+            
+            id<MTLSamplerState> samplerState = texture->GetSampler();
+            // 如果Texture中没有采样器，创建默认采样器
+            if (!samplerState) {
+                MTLSamplerDescriptor* samplerDesc = [[MTLSamplerDescriptor alloc] init];
+                samplerDesc.minFilter = MTLSamplerMinMagFilterLinear;
+                samplerDesc.magFilter = MTLSamplerMinMagFilterLinear;
+                samplerDesc.mipFilter = MTLSamplerMipFilterNotMipmapped;
+                samplerDesc.sAddressMode = MTLSamplerAddressModeRepeat;
+                samplerDesc.tAddressMode = MTLSamplerAddressModeRepeat;
+                samplerDesc.rAddressMode = MTLSamplerAddressModeRepeat;
+                
+                samplerState = [m_device newSamplerStateWithDescriptor:samplerDesc];
+                LR_LOG_INFO_F("ContextMTL: Created default sampler for texture");
+            }
 
-        [m_currentRenderEncoder setFragmentSamplerState:samplerState atIndex:slot];
-        LR_LOG_INFO_F("Metal: Sampler state created and bound to slot %u", slot);
-    } else {
-        if (!m_currentRenderEncoder) {
-            LR_LOG_WARNING_F("Metal: Cannot bind texture - no render encoder");
-        }
-        if (!texture) {
-            LR_LOG_WARNING_F("Metal: Cannot bind texture - texture is null");
+            [state.encoder setFragmentSamplerState:samplerState atIndex:slot];
         }
     }
 }
+
+// =============================================================================
+// 渲染通道API（IRenderContextImpl接口）
+// =============================================================================
+
+void RenderContextMTL::BeginRenderPass(IFrameBufferImpl* frameBuffer) {
+    LR_LOG_INFO_F("ContextMTL: BeginRenderPass (via interface) - frameBuffer: %p", frameBuffer);
+    
+    if (!m_frameStarted) {
+        LR_LOG_ERROR_F("ContextMTL: BeginRenderPass called but frame not started");
+        return;
+    }
+    
+    if (frameBuffer) {
+        // 离屏渲染：使用BeginOffscreenRenderPass
+        FrameBufferMTL* framebufferMTL = static_cast<FrameBufferMTL*>(frameBuffer);
+        BeginOffscreenRenderPass(framebufferMTL, nullptr);
+    } else {
+        // 默认framebuffer：使用BeginRenderPassEx(nullptr)
+        BeginRenderPassEx(nullptr);
+    }
+}
+
+void RenderContextMTL::EndRenderPass() {
+    LR_LOG_INFO_F("ContextMTL: EndRenderPass (via interface)");
+    EndRenderPassEx();
+}
+
+// =============================================================================
+// 新渲染通道API实现
+// =============================================================================
+
+void RenderContextMTL::BeginRenderPassEx(RenderPassMTL* renderPass) {
+    LR_LOG_INFO_F("ContextMTL: BeginRenderPassEx - renderPass: %p", renderPass);
+    
+    if (!m_frameStarted) {
+        LR_LOG_ERROR_F("ContextMTL: BeginRenderPassEx called but frame not started");
+        return;
+    }
+    
+    // 如果renderPass为nullptr，创建默认RenderPass
+    RenderPassMTL* activeRenderPass = renderPass;
+    if (!activeRenderPass) {
+        // 创建默认RenderPass配置
+        RenderPassConfig config;
+        config.useDefaultFrameBuffer = true;
+        config.drawable = m_currentDrawable;
+        config.defaultDepthTexture = m_depthStencilTexture;
+        config.clearColor[0] = m_clearColor[0];
+        config.clearColor[1] = m_clearColor[1];
+        config.clearColor[2] = m_clearColor[2];
+        config.clearColor[3] = m_clearColor[3];
+        config.clearDepth = m_clearDepth;
+        
+        m_defaultRenderPass = std::make_unique<RenderPassMTL>(config);
+        activeRenderPass = m_defaultRenderPass.get();
+    }
+    
+    // 创建encoder
+    id<MTLRenderCommandEncoder> encoder = CreateRenderEncoder(activeRenderPass);
+    if (!encoder) {
+        LR_LOG_ERROR_F("ContextMTL: Failed to create render encoder");
+        return;
+    }
+    
+    // 保存状态
+    RenderState state;
+    state.renderPass = activeRenderPass;
+    state.encoder = encoder;
+    state.commandBuffer = GetCurrentCommandBuffer();
+    state.viewport = m_viewport;
+    state.scissor = m_scissorRect;
+    state.pipelineState = m_currentPipelineState;
+    
+    m_stateStack->PushState(state);
+    
+    // 应用视口和裁剪
+    ApplyViewportAndScissor();
+    
+    // 恢复管线状态
+    RestorePipelineState();
+    
+    LR_LOG_INFO_F("ContextMTL: RenderPass started (stack depth: %u)", m_stateStack->GetDepth());
+}
+
+void RenderContextMTL::EndRenderPassEx() {
+    if (m_stateStack->IsEmpty()) {
+        LR_LOG_WARNING_F("ContextMTL: EndRenderPassEx called but no active render pass");
+        return;
+    }
+    
+    // 弹出状态
+    RenderState state = m_stateStack->PopState();
+    
+    // 结束encoder
+    if (state.encoder) {
+        [state.encoder endEncoding];
+        LR_LOG_INFO_F("ContextMTL: Render encoder ended");
+    }
+    
+    LR_LOG_INFO_F("ContextMTL: RenderPass ended (stack depth: %u)", m_stateStack->GetDepth());
+}
+
+void RenderContextMTL::BeginMRTRenderPass(const std::vector<FrameBufferMTL*>& colorTargets,
+                                         FrameBufferMTL* depthTarget) {
+    // 注意：此方法保留以兼容旧代码，但新设计中使用单个FrameBuffer
+    LR_LOG_INFO_F("ContextMTL: BeginMRTRenderPass - %zu color targets (legacy)", colorTargets.size());
+    
+    if (colorTargets.empty()) {
+        LR_LOG_ERROR_F("ContextMTL: BeginMRTRenderPass requires at least one color target");
+        return;
+    }
+    
+    // 使用第一个FrameBuffer（新设计中应该只传一个）
+    FrameBufferMTL* frameBuffer = colorTargets[0];
+    if (colorTargets.size() > 1) {
+        LR_LOG_WARNING_F("ContextMTL: Multiple FrameBuffers passed, only using the first one. "
+                        "Use single FrameBuffer with multiple color attachments for MRT.");
+    }
+    
+    // 创建RenderPass配置
+    RenderPassConfig config;
+    config.frameBuffer = frameBuffer;
+    config.clearColor[0] = m_clearColor[0];
+    config.clearColor[1] = m_clearColor[1];
+    config.clearColor[2] = m_clearColor[2];
+    config.clearColor[3] = m_clearColor[3];
+    config.clearDepth = m_clearDepth;
+    
+    m_currentRenderPass = std::make_unique<RenderPassMTL>(config);
+    
+    BeginRenderPassEx(m_currentRenderPass.get());
+}
+
+void RenderContextMTL::BeginOffscreenRenderPass(FrameBufferMTL* target, FrameBufferMTL* depthTarget) {
+    if (!target) {
+        LR_LOG_ERROR_F("ContextMTL: BeginOffscreenRenderPass requires a valid target");
+        return;
+    }
+    
+    LR_LOG_INFO_F("ContextMTL: BeginOffscreenRenderPass - target: %p", target);
+    
+    // 直接使用单个FrameBuffer
+    std::vector<FrameBufferMTL*> targets = {target};
+    BeginMRTRenderPass(targets, depthTarget);
+}
+
+// =============================================================================
+// 内部辅助方法
+// =============================================================================
 
 void RenderContextMTL::CreateDepthStencilTexture() {
     if (m_width == 0 || m_height == 0) {
@@ -593,94 +859,80 @@ void RenderContextMTL::CreateDepthStencilTexture() {
     m_depthStencilTexture.label = @"Default Depth Texture";
 }
 
-void RenderContextMTL::EnsureRenderEncoder() {
-    if (m_currentRenderEncoder) {
-        return;
-    }
-    
-    LR_LOG_INFO_F("Metal: EnsureRenderEncoder - creating render encoder...");
-    
-    // BeginFrame should have been called already
-    if (!m_frameStarted) {
-        LR_LOG_ERROR_F("Metal: EnsureRenderEncoder called but frame not started!");
-        return;
-    }
-    
-    // 确保有drawable (should be acquired in BeginFrame)
-    if (!m_currentDrawable) {
-        LR_LOG_ERROR_F("Metal: No drawable available in EnsureRenderEncoder");
-        return;
+id<MTLRenderCommandEncoder> RenderContextMTL::CreateRenderEncoder(RenderPassMTL* renderPass) {
+    if (!renderPass) {
+        LR_LOG_ERROR_F("ContextMTL: CreateRenderEncoder requires a valid renderPass");
+        return nil;
     }
     
     id<MTLCommandBuffer> commandBuffer = GetCurrentCommandBuffer();
     if (!commandBuffer) {
-        LR_LOG_ERROR_F("Metal: No command buffer available");
-        return;
+        LR_LOG_ERROR_F("ContextMTL: No command buffer available");
+        return nil;
     }
     
-    LR_LOG_INFO_F("Metal: Creating render encoder with drawable texture size: %lux%lu", 
-                (unsigned long)m_currentDrawable.texture.width, (unsigned long)m_currentDrawable.texture.height);
-    
-    // 创建渲染通道描述符
-    MTLRenderPassDescriptor* passDesc = [[MTLRenderPassDescriptor alloc] init];
-    
-    // 设置颜色附件
-    passDesc.colorAttachments[0].texture = m_currentDrawable.texture;
-    passDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
-    passDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
-    passDesc.colorAttachments[0].clearColor = MTLClearColorMake(m_clearColor[0], m_clearColor[1],
-                                                                 m_clearColor[2], m_clearColor[3]);
-    
-    // 设置深度附件
-    if (m_depthStencilTexture) {
-        passDesc.depthAttachment.texture = m_depthStencilTexture;
-        passDesc.depthAttachment.loadAction = MTLLoadActionClear;
-        passDesc.depthAttachment.storeAction = MTLStoreActionDontCare;
-        passDesc.depthAttachment.clearDepth = m_clearDepth;
+    MTLRenderPassDescriptor* passDesc = renderPass->CreateDescriptor();
+    if (!passDesc) {
+        LR_LOG_ERROR_F("ContextMTL: Failed to create render pass descriptor");
+        return nil;
     }
     
-    // 创建渲染命令编码器
-    m_currentRenderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDesc];
-    
-    if (!m_currentRenderEncoder) {
-        LR_LOG_ERROR_F("Metal: Failed to create render command encoder");
-        return;
+    id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:passDesc];
+    if (!encoder) {
+        LR_LOG_ERROR_F("ContextMTL: Failed to create render encoder");
+        return nil;
     }
     
-    LR_LOG_INFO_F("Metal: Render encoder created successfully");
+    LR_LOG_INFO_F("ContextMTL: Render encoder created (%ux%u)", 
+                renderPass->GetWidth(), renderPass->GetHeight());
     
-    // 设置视口和裁剪
-    [m_currentRenderEncoder setViewport:m_viewport];
-    [m_currentRenderEncoder setScissorRect:m_scissorRect];
-    
-    LR_LOG_INFO_F("Metal: Viewport set to: origin(%.0f, %.0f), size(%.0fx%.0f)", 
-                m_viewport.originX, m_viewport.originY, m_viewport.width, m_viewport.height);
-    
-    // 恢复管线状态
-    if (m_currentPipelineState && m_currentPipelineState->GetPipelineState()) {
-        [m_currentRenderEncoder setRenderPipelineState:m_currentPipelineState->GetPipelineState()];
-        if (m_currentPipelineState->GetDepthStencilState()) {
-            [m_currentRenderEncoder setDepthStencilState:m_currentPipelineState->GetDepthStencilState()];
+    return encoder;
+}
+
+void RenderContextMTL::EndCurrentEncoder() {
+    if (!m_stateStack->IsEmpty()) {
+        auto& state = m_stateStack->GetCurrentState();
+        if (state.encoder) {
+            [state.encoder endEncoding];
+            state.encoder = nil;
+            LR_LOG_INFO_F("ContextMTL: Current encoder ended");
         }
-        [m_currentRenderEncoder setCullMode:m_currentPipelineState->GetCullMode()];
-        [m_currentRenderEncoder setFrontFacingWinding:m_currentPipelineState->GetFrontFace()];
-        [m_currentRenderEncoder setTriangleFillMode:m_currentPipelineState->GetFillMode()];
-        LR_LOG_INFO_F("Metal: Pipeline state restored in render encoder");
-    }
-    
-    // 恢复顶点缓冲区
-    if (m_currentVertexBuffer && m_currentVertexBuffer->GetBuffer()) {
-        [m_currentRenderEncoder setVertexBuffer:m_currentVertexBuffer->GetBuffer()
-                                         offset:0
-                                        atIndex:0];
     }
 }
 
-void RenderContextMTL::EndCurrentRenderEncoder() {
-    if (m_currentRenderEncoder) {
-        [m_currentRenderEncoder endEncoding];
-        m_currentRenderEncoder = nil;
+void RenderContextMTL::ApplyViewportAndScissor() {
+    if (m_stateStack->IsEmpty()) {
+        return;
     }
+    
+    auto& state = m_stateStack->GetCurrentState();
+    if (state.encoder) {
+        [state.encoder setViewport:m_viewport];
+        [state.encoder setScissorRect:m_scissorRect];
+    }
+}
+
+void RenderContextMTL::RestorePipelineState() {
+    if (m_stateStack->IsEmpty()) {
+        return;
+    }
+    
+    auto& state = m_stateStack->GetCurrentState();
+    if (!state.encoder || !m_currentPipelineState) {
+        return;
+    }
+    
+    if (m_currentPipelineState->GetPipelineState()) {
+        [state.encoder setRenderPipelineState:m_currentPipelineState->GetPipelineState()];
+    }
+    
+    if (m_currentPipelineState->GetDepthStencilState()) {
+        [state.encoder setDepthStencilState:m_currentPipelineState->GetDepthStencilState()];
+    }
+    
+    [state.encoder setCullMode:m_currentPipelineState->GetCullMode()];
+    [state.encoder setFrontFacingWinding:m_currentPipelineState->GetFrontFace()];
+    [state.encoder setTriangleFillMode:m_currentPipelineState->GetFillMode()];
 }
 
 } // namespace mtl

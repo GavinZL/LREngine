@@ -330,18 +330,23 @@ void LRRenderContext::Present() {
 void LRRenderContext::BeginRenderPass(LRFrameBuffer* frameBuffer) {
     mCurrentFrameBuffer = frameBuffer;
     
-    if (frameBuffer) {
-        frameBuffer->Bind();
-    } else if (mImpl) {
-        // 绑定默认帧缓冲
-        // OpenGL中通过绑定0实现
+    // 调用后端实现（Metal后端会使用此方法创建渲染通道）
+    if (mImpl) {
+        IFrameBufferImpl* fbImpl = frameBuffer ? frameBuffer->GetImpl() : nullptr;
+        mImpl->BeginRenderPass(fbImpl);
     }
+    
+    // 注意：不再调用frameBuffer->Bind()，避免在Metal后端重复创建渲染通道
+    // OpenGL等后端在自己的BeginRenderPass实现中处理Bind逻辑
 }
 
 void LRRenderContext::EndRenderPass() {
-    if (mCurrentFrameBuffer) {
-        mCurrentFrameBuffer->Unbind();
+    // 调用后端实现
+    if (mImpl) {
+        mImpl->EndRenderPass();
     }
+    
+    // 注意：不再调用frameBuffer->Unbind()，避免在Metal后端重复操作
     mCurrentFrameBuffer = nullptr;
 }
 

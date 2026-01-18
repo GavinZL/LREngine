@@ -504,6 +504,8 @@ int main()
             // 清除屏幕
             context->Clear(ClearFlag_Color | ClearFlag_Depth, 0.2f, 0.3f, 0.4f, 1.0f, 1.0f, 0);
 
+            context->BeginRenderPass(nullptr);
+
             // 使用着色器程序
             shaderProgram->Use();
 
@@ -518,6 +520,8 @@ int main()
             // 绘制立方体
             context->Draw(0, 36);
 
+            context->EndRenderPass();
+            
             // 结束帧并呈现
             context->EndFrame();
 

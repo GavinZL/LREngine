@@ -17,6 +17,7 @@ namespace render {
 namespace mtl {
 
 class TextureMTL;
+class RenderContextMTL;
 
 /**
  * @brief Metal帧缓冲实现
@@ -26,7 +27,8 @@ class TextureMTL;
  */
 class FrameBufferMTL : public IFrameBufferImpl {
 public:
-    FrameBufferMTL(id<MTLDevice> device);
+    // 移除context参数，解除循环依赖
+    explicit FrameBufferMTL(id<MTLDevice> device);
     ~FrameBufferMTL() override;
 
     // IFrameBufferImpl接口
@@ -74,6 +76,9 @@ private:
     uint8_t m_clearStencil;
     
     FrameBufferDescriptor m_descriptor;
+    
+    // 删除context指针，解除循环依赖
+    // RenderContextMTL* m_context;
 };
 
 } // namespace mtl

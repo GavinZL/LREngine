@@ -165,6 +165,17 @@ public:
      */
     virtual void BindTexture(ITextureImpl* texture, uint32_t slot) {}
     
+    /**
+     * @brief 开始渲染通道
+     * @param frameBuffer 帧缓冲实现，nullptr表示默认framebuffer
+     */
+    virtual void BeginRenderPass(IFrameBufferImpl* frameBuffer) {}
+    
+    /**
+     * @brief 结束渲染通道
+     */
+    virtual void EndRenderPass() {}
+    
     // =========================================================================
     // 绘制命令
     // =========================================================================

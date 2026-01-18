@@ -5,11 +5,13 @@
 
 #include "FrameBufferMTL.h"
 #include "TextureMTL.h"
+#include "ContextMTL.h"
 
 #ifdef LRENGINE_ENABLE_METAL
 
 #include "TypeConverterMTL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 
 namespace lrengine {
 namespace render {
@@ -117,8 +119,12 @@ bool FrameBufferMTL::AttachColorTexture(ITextureImpl* texture, uint32_t index, u
         m_colorMipLevels.resize(index + 1, 0);
     }
 
-    m_colorTextures[index] = mtlTexture->GetTexture();
+    id<MTLTexture> tex = mtlTexture->GetTexture();
+    m_colorTextures[index] = tex;
     m_colorMipLevels[index] = mipLevel;
+    
+    LR_LOG_INFO_F("FrameBufferMTL: AttachColorTexture - index: %u, TextureMTL: %p, MTLTexture: %p", 
+                index, mtlTexture, tex);
     
     UpdateRenderPassDescriptor();
     return true;
@@ -171,11 +177,15 @@ bool FrameBufferMTL::IsComplete() const {
 }
 
 void FrameBufferMTL::Bind() {
-    // Metal中，帧缓冲绑定在创建渲染命令编码器时完成
+    // Metal中FrameBuffer的Bind操作通过BeginRenderPassEx完成
+    // 此方法保留为空实现以兼容接口
+    LR_LOG_INFO_F("FrameBufferMTL: Bind called (use BeginRenderPassEx in Metal backend)");
 }
 
 void FrameBufferMTL::Unbind() {
-    // Metal中，帧缓冲绑定在创建渲染命令编码器时完成
+    // Metal中FrameBuffer的Unbind操作通过EndRenderPassEx完成
+    // 此方法保留为空实现以兼容接口
+    LR_LOG_INFO_F("FrameBufferMTL: Unbind called (use EndRenderPassEx in Metal backend)");
 }
 
 void FrameBufferMTL::Clear(uint32_t flags, const float* color, float depth, uint8_t stencil) {

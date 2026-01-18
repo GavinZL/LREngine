@@ -145,6 +145,9 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
         src/platform/metal/PipelineStateMTL.mm
         src/platform/metal/FenceMTL.mm
         src/platform/metal/DeviceFactoryMTL.mm
+        src/platform/metal/RenderPassMTL.mm
+        src/platform/metal/CommandBufferPoolMTL.mm
+        src/platform/metal/RenderStateStackMTL.mm
     )
     
     set(LRENGINE_METAL_HEADERS
@@ -157,6 +160,9 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
         src/platform/metal/FenceMTL.h
         src/platform/metal/TypeConverterMTL.h
         src/platform/metal/DeviceFactoryMTL.h
+        src/platform/metal/RenderPassMTL.h
+        src/platform/metal/CommandBufferPoolMTL.h
+        src/platform/metal/RenderStateStackMTL.h
     )
 endif()
 

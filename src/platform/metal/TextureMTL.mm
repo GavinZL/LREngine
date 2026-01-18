@@ -57,21 +57,36 @@ bool TextureMTL::Create(const TextureDescriptor& desc) {
     texDesc.sampleCount = desc.sampleCount;
     texDesc.arrayLength = (desc.type == TextureType::Texture2DArray) ? desc.depth : 1;
     
-    // 设置存储模式和使用标志
-    // iOS优先使用Shared模式以获得更好的兼容性
-    #if TARGET_OS_IPHONE || TARGET_OS_IOS
-        texDesc.storageMode = MTLStorageModeShared;
-    #else
-        // macOS支持更多存储模式
-        texDesc.storageMode = MTLStorageModeManaged;
-    #endif
-    
+    // 设置纹理使用标志
     texDesc.usage = MTLTextureUsageShaderRead;
     
-    // 深度纹理需要特殊设置
-    if (IsDepthFormat(desc.format)) {
+    // 判断是否用作渲染目标
+    bool isRenderTarget = (desc.data == nullptr) || IsDepthFormat(desc.format);
+    if (isRenderTarget) {
         texDesc.usage |= MTLTextureUsageRenderTarget;
-        texDesc.storageMode = MTLStorageModePrivate;  // 深度纹理在所有平台都用Private
+    }
+    
+    // 设置存储模式：根据平台、纹理类型和用途选择最优模式
+    if (IsDepthFormat(desc.format)) {
+        // 深度/模板纹理：所有平台都使用Private模式
+        texDesc.storageMode = MTLStorageModePrivate;
+    } else if (desc.data == nullptr) {
+        // 离屏渲染纹理（无初始数据）
+        #if TARGET_OS_IPHONE || TARGET_OS_IOS
+            // iOS: 如果仅用于RenderTarget且不需CPU访问，使用Private模式更高效
+            // 但为了兼容性（支持后续可能的CPU读取），默认使用Shared
+            texDesc.storageMode = MTLStorageModeShared;
+        #else
+            // macOS: 离屏渲染纹理使用Private模式（GPU专用，最佳性能）
+            texDesc.storageMode = MTLStorageModePrivate;
+        #endif
+    } else {
+        // 有初始数据的纹理：需要CPU写入
+        #if TARGET_OS_IPHONE || TARGET_OS_IOS
+            texDesc.storageMode = MTLStorageModeShared;
+        #else
+            texDesc.storageMode = MTLStorageModeManaged;  // macOS支持CPU写入后同步到GPU
+        #endif
     }
 
     m_texture = [m_device newTextureWithDescriptor:texDesc];
