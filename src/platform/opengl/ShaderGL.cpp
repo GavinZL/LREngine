@@ -226,6 +226,7 @@ void ShaderProgramGL::Use()
 {
     if (m_programID != 0) {
         glUseProgram(m_programID);
+        LR_LOG_DEBUG_F("OpenGL UseProgram: %d", m_programID);
     }
 }
 

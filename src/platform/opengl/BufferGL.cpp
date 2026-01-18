@@ -5,6 +5,7 @@
 
 #include "BufferGL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 
 #ifdef LRENGINE_ENABLE_OPENGL
 
@@ -117,6 +118,7 @@ void BufferGL::Bind()
 {
     if (m_bufferID != 0) {
         glBindBuffer(m_target, m_bufferID);
+        LR_LOG_DEBUG_F("OpenGL Bind Buffer: %d", m_bufferID);
     }
 }
 

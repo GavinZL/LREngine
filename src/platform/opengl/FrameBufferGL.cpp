@@ -6,7 +6,7 @@
 #include "FrameBufferGL.h"
 #include "TextureGL.h"
 #include "lrengine/core/LRError.h"
-
+#include "lrengine/utils/LRLog.h"
 #ifdef LRENGINE_ENABLE_OPENGL
 
 namespace lrengine {
@@ -46,6 +46,7 @@ bool FrameBufferGL::Create(const FrameBufferDescriptor& desc)
         return false;
     }
 
+    LR_LOG_DEBUG_F("OpenGL Create Framebuffer: %d", m_fboID);
     return true;
 }
 
@@ -87,6 +88,8 @@ bool FrameBufferGL::AttachColorTexture(ITextureImpl* texture, uint32_t index, ui
     }
     m_drawBuffers[index] = attachment;
 
+    LR_LOG_DEBUG_F("OpenGL Attach Color Texture: %d, Attachment: %d, FBO: %d", glTexture->GetTextureID(), attachment, m_fboID);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return true;
 }
@@ -105,6 +108,7 @@ bool FrameBufferGL::AttachDepthTexture(ITextureImpl* texture, uint32_t mipLevel)
                           glTexture->GetTextureID(), mipLevel);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    LR_LOG_DEBUG_F("OpenGL Attach Depth Texture: %d, FBO: %d", glTexture->GetTextureID(), m_fboID);
     m_hasDepth = true;
     return true;
 }
@@ -165,6 +169,7 @@ void FrameBufferGL::Bind()
         glBindFramebuffer(GL_FRAMEBUFFER, m_fboID);
         SetDrawBuffers();
         glViewport(0, 0, m_width, m_height);
+        LR_LOG_DEBUG_F("OpenGL Bind Framebuffer: FBO=%d, Viewport=%ux%u", m_fboID, m_width, m_height);
     }
 }
 

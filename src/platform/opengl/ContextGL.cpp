@@ -4,6 +4,7 @@
  */
 
 #include "ContextGL.h"
+#include <OpenGL/gl.h>
 
 #ifdef LRENGINE_ENABLE_OPENGL
 
@@ -36,8 +37,10 @@ bool RenderContextGL::Initialize(const RenderContextDescriptor& desc) {
     // 这里假设OpenGL上下文已经由外部创建并设置为当前
     
     // 创建默认VAO（OpenGL Core Profile需要）
+    // 注意：不立即绑定，由VertexBuffer自己管理VAO
     glGenVertexArrays(1, &mDefaultVAO);
-    glBindVertexArray(mDefaultVAO);
+    // 不要在这里绑定mDefaultVAO，避免状态污染
+    // glBindVertexArray(mDefaultVAO);  // ✖️ 移除这行
     
     // 设置默认状态
     glEnable(GL_DEPTH_TEST);
@@ -174,6 +177,36 @@ void RenderContextGL::BindTexture(ITextureImpl* texture, uint32_t slot) {
     if (texture) {
         texture->Bind(slot);
     }
+}
+
+void RenderContextGL::BeginRenderPass(IFrameBufferImpl* frameBuffer) {
+    LR_LOG_TRACE_F("OpenGL BeginRenderPass: FBO=%p", frameBuffer);
+    
+    // ❗重要：在绑定 FBO 之后，必须确保深度写入启用
+    // 因为之前的 Pass 可能设置了 glDepthMask(GL_FALSE)
+    // 这会导致 glClear(GL_DEPTH_BUFFER_BIT) 无法清除深度缓冲
+    glDepthMask(GL_TRUE);
+    LR_LOG_TRACE("  Depth Write: Forced to ENABLED for Clear operation");
+    
+    if (frameBuffer) {
+        // 绑定离屏FBO，并设置视口
+        frameBuffer->Bind();
+        LR_LOG_TRACE_F("  Viewport: %ux%u (offscreen FBO)", frameBuffer->GetWidth(), frameBuffer->GetHeight());
+    } else {
+        // 绑定默认framebuffer（屏幕）
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // 重要：恢复默认视口（使用窗口大小）
+        glViewport(0, 0, mWidth, mHeight);
+        LR_LOG_TRACE_F("  Viewport: %ux%u (default FBO/screen)", mWidth, mHeight);
+    }
+}
+
+void RenderContextGL::EndRenderPass() {
+    LR_LOG_TRACE("OpenGL EndRenderPass");
+    // OpenGL不需要显式结束渲染通道
+    // 但为了确保多Pass渲染的同步，调用Flush确保命令提交
+    glFlush();
+    LR_LOG_TRACE("  glFlush() called to ensure command submission");
 }
 
 void RenderContextGL::DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) {

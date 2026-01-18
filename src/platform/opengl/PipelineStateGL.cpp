@@ -5,6 +5,7 @@
 
 #include "PipelineStateGL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
 
 #ifdef LRENGINE_ENABLE_OPENGL
 
@@ -78,16 +79,23 @@ void PipelineStateGL::ApplyDepthStencilState()
 {
     const DepthStencilStateDescriptor& ds = m_desc.depthStencilState;
 
-    // 深度测试
+    // ❗重要：先设置深度写入，再设置深度测试
+    // 因为 glClear(GL_DEPTH_BUFFER_BIT) 需要 glDepthMask(GL_TRUE) 才能生效
+    // 如果先禁用深度测试，再关闭深度写入，会导致下一帧的 Clear 无法清除深度缓冲
+    
+    // 1. 深度写入（必须在深度测试之前设置）
+    glDepthMask(ds.depthWriteEnabled ? GL_TRUE : GL_FALSE);
+    LR_LOG_TRACE_F("[PipelineState] Depth Write: %s", ds.depthWriteEnabled ? "ENABLED" : "DISABLED");
+
+    // 2. 深度测试
     if (ds.depthTestEnabled) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(ToGLCompareFunc(ds.depthCompareFunc));
+        LR_LOG_TRACE_F("[PipelineState] Depth Test ENABLED (func=%d)", (int)ds.depthCompareFunc);
     } else {
         glDisable(GL_DEPTH_TEST);
+        LR_LOG_TRACE("[PipelineState] Depth Test DISABLED");
     }
-
-    // 深度写入
-    glDepthMask(ds.depthWriteEnabled ? GL_TRUE : GL_FALSE);
 
     // 模板测试
     if (ds.stencilEnabled) {
@@ -162,8 +170,10 @@ void PipelineStateGL::ApplyRasterizerState()
     // 裁剪测试
     if (raster.scissorEnabled) {
         glEnable(GL_SCISSOR_TEST);
+        LR_LOG_TRACE("[PipelineState] Scissor Test ENABLED");
     } else {
         glDisable(GL_SCISSOR_TEST);
+        LR_LOG_TRACE("[PipelineState] Scissor Test DISABLED");
     }
 
     // 多采样

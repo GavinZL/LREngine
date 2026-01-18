@@ -53,6 +53,10 @@ public:
     void BindUniformBuffer(IBufferImpl* buffer, uint32_t slot) override;
     void BindTexture(ITextureImpl* texture, uint32_t slot) override;
     
+    // 渲染通道
+    void BeginRenderPass(IFrameBufferImpl* frameBuffer) override;
+    void EndRenderPass() override;
+    
     void DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) override;
     void DrawElements(PrimitiveType primitiveType, uint32_t indexCount, 
                      IndexType indexType, size_t indexOffset) override;

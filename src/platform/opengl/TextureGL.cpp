@@ -5,6 +5,8 @@
 
 #include "TextureGL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/LRLog.h"
+
 #include <algorithm>
 
 #ifdef LRENGINE_ENABLE_OPENGL
@@ -105,6 +107,7 @@ bool TextureGL::Create(const TextureDescriptor& desc)
                 const void* levelData = (level == 0) ? desc.data : nullptr;
                 glTexImage2D(m_target, level, m_internalFormat, mipWidth, mipHeight, 0,
                             m_format, m_dataType, levelData);
+                            LR_LOG_DEBUG_F("OpenGL Create Texture: %d, Level: %d, Width: %d, Height: %d, data:%p", m_textureID, level, mipWidth, mipHeight, desc.data);
             }
             break;
 
@@ -300,6 +303,7 @@ void TextureGL::Bind(uint32_t slot)
     if (m_textureID != 0) {
         glActiveTexture(GL_TEXTURE0 + slot);
         glBindTexture(m_target, m_textureID);
+        LR_LOG_DEBUG_F("OpenGL Bind Texture: %d", m_textureID);
     }
 }
 

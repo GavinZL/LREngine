@@ -367,11 +367,10 @@ void LRRenderContext::SetScissor(int32_t x, int32_t y, int32_t width, int32_t he
 }
 
 void LRRenderContext::SetPipelineState(LRPipelineState* pipelineState) {
-    LR_LOG_TRACE_F("LRRenderContext::SetPipelineState: %p", pipelineState);
     mCurrentPipelineState = pipelineState;
     
     if (pipelineState) {
-        pipelineState->Apply();
+        // pipelineState->Apply();     ///< TODO有点多余
         mCurrentPrimitiveType = pipelineState->GetPrimitiveType();
         
         // 使用着色器程序
@@ -389,7 +388,7 @@ void LRRenderContext::SetPipelineState(LRPipelineState* pipelineState) {
 void LRRenderContext::SetVertexBuffer(LRVertexBuffer* buffer, uint32_t slot) {
     LR_LOG_TRACE_F("LRRenderContext::SetVertexBuffer: %p, slot=%u", buffer, slot);
     if (buffer) {
-        buffer->Bind();
+        // buffer->Bind(); //TODO 有点多余
         
         // 通知后端绑定顶点缓冲区
         if (mImpl && buffer->GetImpl()) {
@@ -400,7 +399,7 @@ void LRRenderContext::SetVertexBuffer(LRVertexBuffer* buffer, uint32_t slot) {
 
 void LRRenderContext::SetIndexBuffer(LRIndexBuffer* buffer) {
     if (buffer) {
-        buffer->Bind();
+        // buffer->Bind();
         mCurrentIndexType = buffer->GetIndexType();
         
         // 通知后端绑定索引缓冲区
@@ -424,7 +423,7 @@ void LRRenderContext::SetUniformBuffer(LRUniformBuffer* buffer, uint32_t slot) {
 void LRRenderContext::SetTexture(LRTexture* texture, uint32_t slot) {
     LR_LOG_TRACE_F("LRRenderContext::SetTexture: %p, slot=%u", texture, slot);
     if (texture) {
-        texture->Bind(slot);
+        // texture->Bind(slot);
         // 通知后端实现进行实际绑定
         if (mImpl) {
             mImpl->BindTexture(texture->GetImpl(), slot);
@@ -456,7 +455,7 @@ void LRRenderContext::ClearStencil(uint8_t stencil) {
 }
 
 void LRRenderContext::Clear(uint8_t flags, float r, float g, float b, float a, float depth, uint8_t stencil) {
-    LR_LOG_TRACE("LRRenderContext::Clear");
+    // LR_LOG_TRACE("LRRenderContext::Clear");
     float color[4] = {r, g, b, a};
     if (mImpl) {
         mImpl->Clear(flags, color, depth, stencil);
