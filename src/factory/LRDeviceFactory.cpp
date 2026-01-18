@@ -11,6 +11,10 @@
 #include "platform/opengl/DeviceFactoryGL.h"
 #endif
 
+#ifdef LRENGINE_ENABLE_OPENGLES
+#include "platform/gles/DeviceFactoryGLES.h"
+#endif
+
 #ifdef LRENGINE_ENABLE_METAL
 #include "platform/metal/DeviceFactoryMTL.h"
 #endif
@@ -32,7 +36,11 @@ LRDeviceFactory* LRDeviceFactory::GetFactory(Backend backend) {
         
 #ifdef LRENGINE_ENABLE_OPENGLES
         case Backend::OpenGLES: {
-            // TODO: 实现OpenGL ES工厂
+            static DeviceFactoryGLES s_glesFactory;
+            if (s_glesFactory.IsAvailable()) {
+                LR_LOG_INFO("Using OpenGL ES backend");
+                return &s_glesFactory;
+            }
             break;
         }
 #endif

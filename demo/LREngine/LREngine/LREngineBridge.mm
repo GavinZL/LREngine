@@ -489,6 +489,8 @@ static Vertex cubeVertices[] = {
         // 开始帧
         _context->BeginFrame();
         
+        _context->BeginRenderPass();
+        
         // 清除屏幕（深蓝色背景）
         _context->Clear(ClearFlag_Color | ClearFlag_Depth, 
                        0.2f, 0.3f, 0.4f, 1.0f, 1.0f, 0);
@@ -506,6 +508,8 @@ static Vertex cubeVertices[] = {
         
         // 绘制立方体
         _context->Draw(0, 36);
+        
+        _context->EndRenderPass();
         
         // 结束帧并呈现
         _context->EndFrame();

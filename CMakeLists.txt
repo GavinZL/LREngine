@@ -18,7 +18,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(LRENGINE_BUILD_EXAMPLES "Build examples" ON)
 option(LRENGINE_BUILD_TESTS "Build tests" OFF)
 option(LRENGINE_ENABLE_OPENGL "Enable OpenGL backend" ON)
-option(LRENGINE_ENABLE_OPENGLES "Enable OpenGL ES backend" OFF)
+option(LRENGINE_ENABLE_OPENGLES "Enable OpenGL ES backend" ON)
 option(LRENGINE_ENABLE_METAL "Enable Metal backend" ON)
 option(LRENGINE_ENABLE_VULKAN "Enable Vulkan backend" OFF)
 
@@ -131,6 +131,34 @@ if(LRENGINE_ENABLE_OPENGL)
     )
 endif()
 
+# OpenGL ES后端源文件
+if(LRENGINE_ENABLE_OPENGLES)
+    set(LRENGINE_OPENGLES_SOURCES
+        src/platform/gles/ContextGLES.cpp
+        src/platform/gles/BufferGLES.cpp
+        src/platform/gles/ShaderGLES.cpp
+        src/platform/gles/TextureGLES.cpp
+        src/platform/gles/FrameBufferGLES.cpp
+        src/platform/gles/PipelineStateGLES.cpp
+        src/platform/gles/FenceGLES.cpp
+        src/platform/gles/GLESCapabilities.cpp
+        src/platform/gles/DeviceFactoryGLES.cpp
+    )
+    
+    set(LRENGINE_OPENGLES_HEADERS
+        src/platform/gles/ContextGLES.h
+        src/platform/gles/BufferGLES.h
+        src/platform/gles/ShaderGLES.h
+        src/platform/gles/TextureGLES.h
+        src/platform/gles/FrameBufferGLES.h
+        src/platform/gles/PipelineStateGLES.h
+        src/platform/gles/FenceGLES.h
+        src/platform/gles/TypeConverterGLES.h
+        src/platform/gles/GLESCapabilities.h
+        src/platform/gles/DeviceFactoryGLES.h
+    )
+endif()
+
 # Metal后端源文件
 if(LRENGINE_ENABLE_METAL AND APPLE)
     # Metal使用Objective-C++，需要启用相应语言
@@ -202,6 +230,10 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
     list(APPEND LRENGINE_SOURCES ${LRENGINE_METAL_SOURCES})
 endif()
 
+if(LRENGINE_ENABLE_OPENGLES)
+    list(APPEND LRENGINE_SOURCES ${LRENGINE_OPENGLES_SOURCES})
+endif()
+
 # 合并所有头文件
 set(LRENGINE_HEADERS
     ${LRENGINE_CORE_HEADERS}
@@ -217,6 +249,10 @@ endif()
 
 if(LRENGINE_ENABLE_METAL AND APPLE)
     list(APPEND LRENGINE_HEADERS ${LRENGINE_METAL_HEADERS})
+endif()
+
+if(LRENGINE_ENABLE_OPENGLES)
+    list(APPEND LRENGINE_HEADERS ${LRENGINE_OPENGLES_HEADERS})
 endif()
 
 # 创建库
@@ -239,6 +275,22 @@ if(LRENGINE_ENABLE_OPENGL)
     # macOS需要额外链接
     if(APPLE)
         target_link_libraries(lrengine PUBLIC "-framework Cocoa" "-framework IOKit")
+    endif()
+endif()
+
+# OpenGL ES后端链接
+if(LRENGINE_ENABLE_OPENGLES)
+    target_compile_definitions(lrengine PUBLIC LRENGINE_ENABLE_OPENGLES)
+    
+    if(ANDROID)
+        # Android平台链接OpenGL ES和EGL
+        target_link_libraries(lrengine PUBLIC GLESv3 EGL android log)
+    elseif(IOS)
+        # iOS平台链接OpenGLES框架
+        target_link_libraries(lrengine PUBLIC "-framework OpenGLES")
+    elseif(EMSCRIPTEN)
+        # WebGL/Emscripten配置
+        target_compile_options(lrengine PUBLIC -sUSE_WEBGL2=1)
     endif()
 endif()
 
