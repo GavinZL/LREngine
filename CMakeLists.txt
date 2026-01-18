@@ -30,6 +30,8 @@ if(APPLE)
     else()
         set(LRENGINE_PLATFORM_MACOS TRUE)
     endif()
+elseif(ANDROID)
+    set(LRENGINE_PLATFORM_ANDROID TRUE)
 elseif(WIN32)
     set(LRENGINE_PLATFORM_WINDOWS TRUE)
 elseif(UNIX)
@@ -255,8 +257,12 @@ if(LRENGINE_ENABLE_OPENGLES)
     list(APPEND LRENGINE_HEADERS ${LRENGINE_OPENGLES_HEADERS})
 endif()
 
-# 创建库
-add_library(lrengine STATIC ${LRENGINE_SOURCES} ${LRENGINE_HEADERS})
+# 创建库（支持静态库或共享库）
+if(BUILD_SHARED_LIBS)
+    add_library(lrengine SHARED ${LRENGINE_SOURCES} ${LRENGINE_HEADERS})
+else()
+    add_library(lrengine STATIC ${LRENGINE_SOURCES} ${LRENGINE_HEADERS})
+endif()
 
 # 包含目录
 target_include_directories(lrengine
@@ -285,6 +291,7 @@ if(LRENGINE_ENABLE_OPENGLES)
     if(ANDROID)
         # Android平台链接OpenGL ES和EGL
         target_link_libraries(lrengine PUBLIC GLESv3 EGL android log)
+        target_compile_definitions(lrengine PUBLIC LRENGINE_PLATFORM_ANDROID)
     elseif(IOS)
         # iOS平台链接OpenGLES框架
         target_link_libraries(lrengine PUBLIC "-framework OpenGLES")
