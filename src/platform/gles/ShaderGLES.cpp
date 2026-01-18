@@ -49,16 +49,28 @@ std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage)
     // 检查是否已有版本声明
     bool hasVersion = (strncmp(sourceStart, "#version", 8) == 0);
     
-    if (!hasVersion) {
+    if (hasVersion) {
+        // 如果已有版本声明，检查是否已有精度声明
+        // 如果有，直接返回原始源码
+        if (strstr(source, "precision ") != nullptr) {
+            return source;
+        }
+        
+        // 找到版本行的结尾，在其后插入精度声明
+        const char* versionEnd = strchr(sourceStart, '\n');
+        if (versionEnd) {
+            // 复制版本行
+            result.append(sourceStart, versionEnd - sourceStart + 1);
+            sourceStart = versionEnd + 1;
+        }
+    } else {
         // 添加GLSL ES 3.00版本声明
         result = "#version 300 es\n";
     }
     
     // 添加精度声明
-    // 注意：精度声明必须在版本声明之后，其他声明之前
     switch (stage) {
         case ShaderStage::Fragment:
-            // Fragment着色器必须声明默认精度
             result += "precision highp float;\n";
             result += "precision highp int;\n";
             result += "precision highp sampler2D;\n";
@@ -69,13 +81,11 @@ std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage)
             break;
             
         case ShaderStage::Vertex:
-            // Vertex着色器默认精度是highp，但显式声明更清晰
             result += "precision highp float;\n";
             result += "precision highp int;\n";
             break;
             
         case ShaderStage::Compute:
-            // Compute着色器（ES 3.1+）
             result += "precision highp float;\n";
             result += "precision highp int;\n";
             result += "precision highp image2D;\n";
@@ -85,9 +95,9 @@ std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage)
             break;
     }
     
-    // 添加源码
+    // 添加剩余源码
     result += "\n";
-    result += source;
+    result += sourceStart;
     
     return result;
 }
@@ -307,16 +317,31 @@ void ShaderProgramGLES::Use()
 {
     if (m_programID != 0) {
         glUseProgram(m_programID);
-        LR_LOG_DEBUG_F("OpenGL ES UseProgram: %d", m_programID);
+        LR_LOG_INFO_F("[ShaderGLES] UseProgram: %d", m_programID);
+        
+        // 验证program是否成功绑定
+        GLint currentProgram = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+        if (currentProgram != (GLint)m_programID) {
+            LR_LOG_ERROR_F("[ShaderGLES] ERROR: Program bind failed! Expected %d, got %d", 
+                          m_programID, currentProgram);
+        }
+    } else {
+        LR_LOG_ERROR("[ShaderGLES] UseProgram called with invalid program ID (0)!");
     }
 }
 
 int32_t ShaderProgramGLES::GetUniformLocation(const char* name)
 {
     if (m_programID == 0 || name == nullptr) {
+        LR_LOG_ERROR_F("[ShaderGLES] GetUniformLocation: invalid program(%d) or name(%s)", 
+                       m_programID, name ? name : "null");
         return -1;
     }
-    return glGetUniformLocation(m_programID, name);
+    GLint location = glGetUniformLocation(m_programID, name);
+    LR_LOG_INFO_F("[ShaderGLES] GetUniformLocation('%s') = %d (program=%d)", 
+                  name, location, m_programID);
+    return location;
 }
 
 void ShaderProgramGLES::SetUniform1i(int32_t location, int32_t value)
@@ -364,7 +389,26 @@ void ShaderProgramGLES::SetUniformMatrix3fv(int32_t location, const float* value
 void ShaderProgramGLES::SetUniformMatrix4fv(int32_t location, const float* value, bool transpose)
 {
     if (location >= 0 && value != nullptr) {
+        // 检查当前绑定的program是否是此program
+        GLint currentProgram = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+        if (currentProgram != (GLint)m_programID) {
+            LR_LOG_WARNING_F("[ShaderGLES] SetUniformMatrix4fv: current program(%d) != this program(%d)!",
+                            currentProgram, m_programID);
+        }
+        
         glUniformMatrix4fv(location, 1, transpose ? GL_TRUE : GL_FALSE, value);
+        LR_LOG_INFO_F("[ShaderGLES] SetUniformMatrix4fv: location=%d, transpose=%d, program=%d",
+                      location, transpose, m_programID);
+        
+        // 检查GL错误
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            LR_LOG_ERROR_F("[ShaderGLES] GL Error after SetUniformMatrix4fv: 0x%04x", err);
+        }
+    } else {
+        LR_LOG_WARNING_F("[ShaderGLES] SetUniformMatrix4fv skipped: location=%d, value=%p",
+                        location, value);
     }
 }
 

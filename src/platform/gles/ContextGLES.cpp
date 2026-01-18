@@ -35,11 +35,21 @@ bool RenderContextGLES::Initialize(const RenderContextDescriptor& desc) {
     // 注意：实际的OpenGL ES上下文创建需要平台特定代码（EGL等）
     // 这里假设上下文已经由外部创建并设置为当前
     
+    // 打印OpenGL ES版本信息
+    const char* version = (const char*)glGetString(GL_VERSION);
+    const char* vendor = (const char*)glGetString(GL_VENDOR);
+    const char* renderer = (const char*)glGetString(GL_RENDERER);
+    LR_LOG_INFO_F("[ContextGLES] GL_VERSION: %s", version ? version : "null");
+    LR_LOG_INFO_F("[ContextGLES] GL_VENDOR: %s", vendor ? vendor : "null");
+    LR_LOG_INFO_F("[ContextGLES] GL_RENDERER: %s", renderer ? renderer : "null");
+    
     // 初始化能力检测
     m_capabilities.Initialize();
     
     // 创建默认VAO（OpenGL ES 3.0需要VAO）
+    // 注意：这个默认VAO仅作为后备，实际渲染使用VertexBuffer自带的VAO
     glGenVertexArrays(1, &m_defaultVAO);
+    LR_LOG_INFO_F("[ContextGLES] Default VAO created: %u (not bound, each VBO has its own VAO)", m_defaultVAO);
     
     // 设置默认状态
     glEnable(GL_DEPTH_TEST);
@@ -143,6 +153,8 @@ void RenderContextGLES::Clear(uint8_t flags, const float* color, float depth, ui
     }
     
     if (flags & ClearDepth) {
+        // 重要：确保深度写入启用，否则glClear无法清除深度缓冲区
+        glDepthMask(GL_TRUE);
         // OpenGL ES使用glClearDepthf而不是glClearDepth
         glClearDepthf(depth);
         clearMask |= GL_DEPTH_BUFFER_BIT;
@@ -159,23 +171,35 @@ void RenderContextGLES::Clear(uint8_t flags, const float* color, float depth, ui
 }
 
 void RenderContextGLES::BindPipelineState(IPipelineStateImpl* pipelineState) {
-    LR_LOG_TRACE_F("OpenGL ES BindPipelineState: %p", pipelineState);
+    LR_LOG_INFO_F("[ContextGLES] BindPipelineState: %p", pipelineState);
     if (pipelineState) {
         pipelineState->Apply();
+        // 检查当前绑定的program
+        GLint currentProgram = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+        LR_LOG_INFO_F("[ContextGLES] After Apply - Current GL Program: %d", currentProgram);
     }
 }
 
 void RenderContextGLES::BindVertexBuffer(IBufferImpl* buffer, uint32_t slot) {
-    LR_LOG_TRACE_F("OpenGL ES BindVertexBuffer: %p, slot=%u", buffer, slot);
+    LR_LOG_INFO_F("[ContextGLES] BindVertexBuffer: %p, slot=%u", buffer, slot);
     if (buffer) {
         buffer->Bind();
+        // 检查当前绑定的VAO
+        GLint currentVAO = 0;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVAO);
+        LR_LOG_INFO_F("[ContextGLES] After Bind - Current VAO: %d", currentVAO);
     }
 }
 
 void RenderContextGLES::BindIndexBuffer(IBufferImpl* buffer) {
-    LR_LOG_TRACE_F("OpenGL ES BindIndexBuffer: %p", buffer);
+    LR_LOG_INFO_F("[ContextGLES] BindIndexBuffer: %p", buffer);
     if (buffer) {
         buffer->Bind();
+        // 检查当前绑定的EBO
+        GLint currentEBO = 0;
+        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &currentEBO);
+        LR_LOG_INFO_F("[ContextGLES] After Bind - Current EBO: %d", currentEBO);
     }
 }
 
@@ -242,11 +266,59 @@ void RenderContextGLES::DrawArrays(PrimitiveType primitiveType,
 
 void RenderContextGLES::DrawElements(PrimitiveType primitiveType, uint32_t indexCount,
                                      IndexType indexType, size_t indexOffset) {
-    LR_LOG_TRACE_F("OpenGL ES DrawElements: type=%d, count=%u, indexType=%d, offset=%zu", 
+    // 绘制前检查关键状态
+    GLint currentProgram = 0, currentVAO = 0, currentVBO = 0, currentEBO = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVAO);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &currentVBO);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &currentEBO);
+    
+    LR_LOG_INFO_F("[ContextGLES] DrawElements: mode=%d, count=%u, indexType=%d, offset=%zu", 
                    (int)primitiveType, indexCount, (int)indexType, indexOffset);
+    LR_LOG_INFO_F("[ContextGLES] DrawElements State: Program=%d, VAO=%d, VBO=%d, EBO=%d",
+                   currentProgram, currentVAO, currentVBO, currentEBO);
+    
+    // 检查是否有有效的program绑定
+    if (currentProgram == 0) {
+        LR_LOG_ERROR("[ContextGLES] ERROR: No shader program bound before DrawElements!");
+    }
+    if (currentVAO == 0) {
+        LR_LOG_ERROR("[ContextGLES] ERROR: No VAO bound before DrawElements!");
+    }
+    
+    // 检查VAO中的顶点属性是否启用
+    GLint attr0Enabled = 0, attr1Enabled = 0;
+    glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &attr0Enabled);
+    glGetVertexAttribiv(1, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &attr1Enabled);
+    LR_LOG_INFO_F("[ContextGLES] Vertex Attrib Enabled: attr0=%d, attr1=%d", attr0Enabled, attr1Enabled);
+    
+    if (attr0Enabled == 0) {
+        LR_LOG_ERROR("[ContextGLES] ERROR: Vertex attribute 0 (position) is NOT enabled!");
+    }
+    
+    // 检查当前Framebuffer状态
+    GLint currentFBO = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
+    LR_LOG_INFO_F("[ContextGLES] Current FBO: %d (0=default/screen)", currentFBO);
+    
+    if (currentEBO == 0) {
+        LR_LOG_ERROR("[ContextGLES] ERROR: No EBO bound! VAO may not have recorded EBO.");
+    }
+    
     GLenum mode = gles::ToGLESPrimitiveType(primitiveType);
     GLenum type = gles::ToGLESIndexType(indexType);
+    
+    // 调试：打印转换后的GL值
+    LR_LOG_INFO_F("[ContextGLES] glDrawElements params: mode=0x%x, count=%u, type=0x%x, offset=%zu",
+                   mode, indexCount, type, indexOffset);
+    
     glDrawElements(mode, indexCount, type, reinterpret_cast<const void*>(indexOffset));
+    
+    // 检查GL错误
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        LR_LOG_ERROR_F("[ContextGLES] GL Error after DrawElements: 0x%04x", err);
+    }
 }
 
 void RenderContextGLES::DrawArraysInstanced(PrimitiveType primitiveType, 

@@ -165,6 +165,19 @@ void BufferGLES::Bind()
 {
     if (m_bufferID != 0) {
         glBindBuffer(m_target, m_bufferID);
+        
+        // 对于EBO，检查VAO状态
+        if (m_target == GL_ELEMENT_ARRAY_BUFFER) {
+            GLint currentVAO = 0;
+            glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVAO);
+            LR_LOG_INFO_F("[BufferGLES] Bind EBO: ID=%u, CurrentVAO=%d (EBO binding will be recorded in VAO)",
+                          m_bufferID, currentVAO);
+            if (currentVAO == 0) {
+                LR_LOG_WARNING("[BufferGLES] WARNING: EBO bound without VAO! EBO binding won't be recorded.");
+            }
+        } else {
+            LR_LOG_TRACE_F("[BufferGLES] Bind buffer: target=0x%x, ID=%u", m_target, m_bufferID);
+        }
     }
 }
 
@@ -229,7 +242,17 @@ void VertexBufferGLES::Bind()
 {
     if (m_vao != 0) {
         glBindVertexArray(m_vao);
-        LR_LOG_TRACE_F("OpenGL ES BindVertexArray: VAO=%u", m_vao);
+        LR_LOG_INFO_F("[BufferGLES] BindVertexArray: VAO=%u", m_vao);
+        
+        // 验证绑定是否成功
+        GLint currentVAO = 0;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &currentVAO);
+        if (currentVAO != (GLint)m_vao) {
+            LR_LOG_ERROR_F("[BufferGLES] ERROR: VAO bind failed! Expected %u, got %d", 
+                          m_vao, currentVAO);
+        }
+    } else {
+        LR_LOG_ERROR("[BufferGLES] BindVertexArray called with invalid VAO (0)!");
     }
 }
 
@@ -250,11 +273,16 @@ void VertexBufferGLES::SetVertexLayout(const VertexLayoutDescriptor& layout)
 void VertexBufferGLES::SetVertexAttributes(const VertexAttribute* attributes, uint32_t count)
 {
     if (m_vao == 0 || attributes == nullptr || count == 0) {
+        LR_LOG_ERROR_F("[BufferGLES] SetVertexAttributes: invalid params (VAO=%u, attrs=%p, count=%u)",
+                       m_vao, attributes, count);
         return;
     }
 
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_bufferID);
+    
+    LR_LOG_INFO_F("[BufferGLES] SetVertexAttributes: VAO=%u, VBO=%u, count=%u, stride=%u",
+                  m_vao, m_bufferID, count, m_stride);
 
     for (uint32_t i = 0; i < count; ++i) {
         const VertexAttribute& attr = attributes[i];
@@ -265,6 +293,9 @@ void VertexBufferGLES::SetVertexAttributes(const VertexAttribute* attributes, ui
         GLsizei stride = (attr.stride > 0) ? attr.stride : m_stride;
 
         glEnableVertexAttribArray(attr.location);
+        
+        LR_LOG_INFO_F("[BufferGLES]   Attr[%u]: location=%u, components=%d, type=0x%x, stride=%d, offset=%u",
+                      i, attr.location, components, type, stride, attr.offset);
         
         // 整数类型使用glVertexAttribIPointer
         if (type == GL_INT || type == GL_UNSIGNED_INT || 
@@ -284,8 +315,7 @@ void VertexBufferGLES::SetVertexAttributes(const VertexAttribute* attributes, ui
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    LR_LOG_DEBUG_F("OpenGL ES SetVertexAttributes: VAO=%u, count=%u, stride=%u", 
-                   m_vao, count, m_stride);
+    LR_LOG_INFO_F("[BufferGLES] SetVertexAttributes completed: VAO=%u, count=%u", m_vao, count);
 }
 
 // ============================================================================

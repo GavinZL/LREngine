@@ -146,6 +146,10 @@ LRIndexBuffer::LRIndexBuffer()
 bool LRIndexBuffer::Initialize(IBufferImpl* impl, const BufferDescriptor& desc) {
     BufferDescriptor indexDesc = desc;
     indexDesc.type = BufferType::Index;
+    
+    // 从描述符读取索引类型！
+    mIndexType = desc.indexType;
+    
     return LRBuffer::Initialize(impl, indexDesc);
 }
 
