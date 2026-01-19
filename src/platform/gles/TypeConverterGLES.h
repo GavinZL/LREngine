@@ -44,6 +44,12 @@
     #warning "OpenGL ES is not available on this platform. GLES backend will use OpenGL types for compilation but may not work at runtime."
 #endif
 
+// OpenGL ES 兼容性定义
+// GL_STENCIL_INDEX 在 OpenGL ES 中不存在，但在某些场景需要用到
+#ifndef GL_STENCIL_INDEX
+    #define GL_STENCIL_INDEX 0x1901
+#endif
+
 // 前向声明
 namespace lrengine {
 namespace render {

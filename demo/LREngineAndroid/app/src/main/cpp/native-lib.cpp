@@ -603,7 +603,6 @@ Java_com_example_lrenginedemo_LREngineRenderer_nativeRender(
     Mat4 model = modelY * modelX;
     
     // 分别传递三个矩阵，在shader内计算MVP
-    // 此处注意， mat4 是按行主序， 但perspective 是按列主序， 导致矩阵有点奇怪 ， 需要统一
     g_pipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", model, false);
     g_pipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", view, false);
     g_pipelineState->GetShaderProgram()->SetUniformMatrix4("projectionMatrix", projection, false);
