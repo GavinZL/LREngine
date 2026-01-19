@@ -915,6 +915,64 @@ main() {
     fi
     
     print_info "请查看 ${OUTPUT_DIR}/README.md 了解如何在Android项目中集成LREngine"
+    
+    # 拷贝库文件到Android Demo项目
+    copy_to_android_demo
+}
+
+################################################################################
+# 拷贝库文件到Android Demo项目
+################################################################################
+
+copy_to_android_demo() {
+    local demo_jniLibs_dir="${PROJECT_ROOT}/demo/LREngineAndroid/app/src/main/jniLibs"
+    local source_jniLibs_dir="${OUTPUT_DIR}/jniLibs"
+    
+    # 检查源目录是否存在
+    if [[ ! -d "$source_jniLibs_dir" ]]; then
+        print_warning "源jniLibs目录不存在，跳过拷贝到Demo项目"
+        return
+    fi
+    
+    print_subheader "拷贝库文件到Android Demo项目"
+    
+    # 创建目标目录（如果不存在）
+    mkdir -p "$demo_jniLibs_dir"
+    
+    # 拷贝各架构的库文件
+    local copied_count=0
+    for abi in $TARGET_ABIS; do
+        local src_abi_dir="${source_jniLibs_dir}/${abi}"
+        local dst_abi_dir="${demo_jniLibs_dir}/${abi}"
+        
+        if [[ -d "$src_abi_dir" ]]; then
+            # 创建目标架构目录
+            mkdir -p "$dst_abi_dir"
+            
+            # 拷贝所有库文件（.so 和 .a）
+            cp -f "${src_abi_dir}"/*.so "$dst_abi_dir/" 2>/dev/null && {
+                print_info "已拷贝 $abi 架构库文件到 Demo 项目"
+                ((copied_count++))
+            } || true
+            
+            cp -f "${src_abi_dir}"/*.a "$dst_abi_dir/" 2>/dev/null || true
+        fi
+    done
+    
+    if [[ $copied_count -gt 0 ]]; then
+        print_success "已拷贝 $copied_count 个架构的库文件到: $demo_jniLibs_dir"
+        
+        # 显示拷贝后的文件列表
+        echo ""
+        print_info "Demo项目jniLibs目录结构:"
+        if command -v tree &> /dev/null; then
+            tree -L 2 "$demo_jniLibs_dir" 2>/dev/null || ls -laR "$demo_jniLibs_dir"
+        else
+            ls -laR "$demo_jniLibs_dir"
+        fi
+    else
+        print_warning "没有库文件被拷贝到Demo项目"
+    fi
 }
 
 # 执行主函数
