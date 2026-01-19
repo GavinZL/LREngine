@@ -113,6 +113,9 @@ private:
     
     // 当前绑定的帧缓冲
     IFrameBufferImpl* m_currentFrameBuffer = nullptr;
+    
+    // BeginRenderPass之前绑定的FBO ID（用于EndRenderPass恢复，iOS需要）
+    GLint m_previousFrameBuffer = 0;
 };
 
 } // namespace render

@@ -10,6 +10,7 @@ import UIKit
 import MetalKit
 import QuartzCore
 
+
 class ViewController: UIViewController {
     
     // MARK: - Properties
@@ -19,6 +20,9 @@ class ViewController: UIViewController {
     
     /// CAMetalLayer用于Metal渲染
     private var metalLayer: CAMetalLayer!
+
+    /// CAEAGLLayer用于OpenGLES渲染
+    private var eaglLayer: CAEAGLLayer!
     
     /// LREngine渲染器
     private var renderer: LREngineRenderer?
@@ -64,6 +68,7 @@ class ViewController: UIViewController {
         metalView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(metalView)
         
+        #if USE_METAL_BACKEND
         // 创建CAMetalLayer
         metalLayer = CAMetalLayer()
         metalLayer.device = MTLCreateSystemDefaultDevice()
@@ -71,28 +76,49 @@ class ViewController: UIViewController {
         metalLayer.framebufferOnly = false
         metalLayer.frame = metalView.bounds
         metalView.layer.addSublayer(metalLayer)
-        
-        print("Metal view and layer setup completed")
+        print("Metal layer setup completed")
+        #else
+        // 创建CAEAGLLayer
+        eaglLayer = CAEAGLLayer()
+        eaglLayer.frame = metalView.bounds
+        eaglLayer.contentsScale = UIScreen.main.nativeScale  // 支持Retina屏幕
+        eaglLayer.isOpaque = true  // 不透明以优化性能
+        eaglLayer.drawableProperties = [
+            kEAGLDrawablePropertyRetainedBacking: false,  // 不保留缓冲区内容
+            kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8  // RGBA8颜色格式
+        ]
+        metalView.layer.addSublayer(eaglLayer)
+        print("EAGL layer setup completed")
+        #endif
     }
     
     private func setupRenderer() {
-        guard let metalLayer = metalLayer else {
-            print("Error: Metal layer is nil")
-            return
-        }
-        
         // 获取屏幕的原生分辨率（支持Retina显示）
         let scale = UIScreen.main.nativeScale
         let width = Int(view.bounds.width * scale)
         let height = Int(view.bounds.height * scale)
         
+        #if USE_METAL_BACKEND
+        guard let metalLayer = metalLayer else {
+            print("Error: Metal layer is nil")
+            return
+        }
         // 设置Metal layer的可绘制尺寸
         metalLayer.drawableSize = CGSize(width: width, height: height)
-        
-        // 初始化LREngine渲染器
+        // 初始化LREngine Metal渲染器
         renderer = LREngineRenderer(metalLayer: metalLayer, 
                                     width: width, 
                                     height: height)
+        #else
+        guard let eaglLayer = eaglLayer else {
+            print("Error: EAGL layer is nil")
+            return
+        }
+        // 初始化LREngine GLES渲染器
+        renderer = LREngineRenderer(eaglLayer: eaglLayer, 
+                                    width: width, 
+                                    height: height)
+        #endif
         
         if renderer == nil {
             print("Error: Failed to create LREngine renderer")
@@ -138,16 +164,19 @@ class ViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        // 更新Metal layer尺寸
-        metalLayer?.frame = metalView.bounds
-        
         // 获取新的渲染尺寸
         let scale = UIScreen.main.nativeScale
         let newSize = CGSize(width: view.bounds.width * scale, 
                            height: view.bounds.height * scale)
         
-        // 更新Metal layer的可绘制尺寸
+        #if USE_METAL_BACKEND
+        // 更新Metal layer尺寸
+        metalLayer?.frame = metalView.bounds
         metalLayer?.drawableSize = newSize
+        #else
+        // 更新EAGL layer尺寸
+        eaglLayer?.frame = metalView.bounds
+        #endif
         
         // 通知渲染器尺寸变化
         renderer?.resize(with: newSize)

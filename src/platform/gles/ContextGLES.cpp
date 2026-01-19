@@ -218,40 +218,44 @@ void RenderContextGLES::BindTexture(ITextureImpl* texture, uint32_t slot) {
 }
 
 void RenderContextGLES::BeginRenderPass(IFrameBufferImpl* frameBuffer) {
-    LR_LOG_TRACE_F("OpenGL ES BeginRenderPass: FBO=%p", frameBuffer);
+    // 保存当前绑定的FBO（用于EndRenderPass恢复，iOS需要因为屏幕FBO不一定是0）
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_previousFrameBuffer);
     
     m_currentFrameBuffer = frameBuffer;
     
     // 重要：确保深度写入启用，以便Clear能正常工作
     glDepthMask(GL_TRUE);
-    LR_LOG_TRACE("  Depth Write: Forced to ENABLED for Clear operation");
     
     if (frameBuffer) {
         // 绑定离屏FBO，并设置视口
         frameBuffer->Bind();
-        LR_LOG_TRACE_F("  Viewport: %ux%u (offscreen FBO)", 
-                       frameBuffer->GetWidth(), frameBuffer->GetHeight());
     } else {
-        // 绑定默认framebuffer（屏幕）
+        // 渲染到屏幕：恢复之前的FBO（iOS上屏幕FBO不是0）
+        #if __ANDROID__
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        #endif
         // 重要：恢复默认视口
         glViewport(0, 0, m_width, m_height);
-        LR_LOG_TRACE_F("  Viewport: %ux%u (default FBO/screen)", m_width, m_height);
     }
 }
 
 void RenderContextGLES::EndRenderPass() {
-    LR_LOG_TRACE("OpenGL ES EndRenderPass");
-    
     // 移动平台优化：可以使用glInvalidateFramebuffer丢弃不需要的附件
     // 这对于tile-based GPU很有用
     if (m_capabilities.hasDiscardFramebuffer && m_currentFrameBuffer != nullptr) {
         // 可以在这里添加帧缓冲失效优化
+        // m_currentFrameBuffer->Invalidate();
+    }
+    
+    // 如果之前绑定了离屏FBO，恢复到之前的FBO（屏幕）
+    if (m_currentFrameBuffer != nullptr) {
+        glBindFramebuffer(GL_FRAMEBUFFER, m_previousFrameBuffer);
+        glViewport(0, 0, m_width, m_height);
+        LR_LOG_TRACE_F("  Restored FBO: %d, Viewport: %ux%u", m_previousFrameBuffer, m_width, m_height);
     }
     
     // 确保命令提交
     glFlush();
-    LR_LOG_TRACE("  glFlush() called to ensure command submission");
     
     m_currentFrameBuffer = nullptr;
 }
