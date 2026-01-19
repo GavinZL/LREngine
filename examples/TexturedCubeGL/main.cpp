@@ -461,8 +461,8 @@ int main()
         context->SetPipelineState(pipelineState);
 
         // 设置Uniform (必须在程序绑定后设置)
-        shaderProgram->SetUniformMatrix4("modelMatrix", model, true);
-        shaderProgram->SetUniformMatrix4("viewMatrix", view, true);
+        shaderProgram->SetUniformMatrix4("modelMatrix", model, false);
+        shaderProgram->SetUniformMatrix4("viewMatrix", view, false);
         shaderProgram->SetUniformMatrix4("projectionMatrix", projection, false);
         shaderProgram->SetUniform("colorTexture", 0); // 纹理槽位0
 

@@ -17,6 +17,8 @@ namespace math {
  * 
  * @note 四元数表示: q = w + xi + yj + zk
  * 用于表示3D旋转,避免万向节死锁问题
+ * 
+ * 与矩阵的转换基于列主序存储的旋转矩阵
  */
 template <typename T>
 class QuaternionT {
@@ -44,8 +46,9 @@ public:
         fromAxes(xaxis, yaxis, zaxis);
     }
 
-    // 从旋转矩阵构造
+    // 从旋转矩阵构造 (列主序: rotation[col][row])
     void fromRotationMatrix(const Mat3T<T>& rotation) {
+        // 列主序下读取对角线元素
         T trace = rotation[0][0] + rotation[1][1] + rotation[2][2];
         T root;
 
@@ -53,9 +56,10 @@ public:
             root = std::sqrt(trace + static_cast<T>(1));
             w = static_cast<T>(0.5) * root;
             root = static_cast<T>(0.5) / root;
-            x = (rotation[2][1] - rotation[1][2]) * root;
-            y = (rotation[0][2] - rotation[2][0]) * root;
-            z = (rotation[1][0] - rotation[0][1]) * root;
+            // 列主序: rotation[col][row]
+            x = (rotation[1][2] - rotation[2][1]) * root;
+            y = (rotation[2][0] - rotation[0][2]) * root;
+            z = (rotation[0][1] - rotation[1][0]) * root;
         } else {
             size_t s_iNext[3] = {1, 2, 0};
             size_t i = 0;
@@ -68,25 +72,30 @@ public:
             T* apkQuat[3] = {&x, &y, &z};
             *apkQuat[i] = static_cast<T>(0.5) * root;
             root = static_cast<T>(0.5) / root;
-            w = (rotation[k][j] - rotation[j][k]) * root;
-            *apkQuat[j] = (rotation[j][i] + rotation[i][j]) * root;
-            *apkQuat[k] = (rotation[k][i] + rotation[i][k]) * root;
+            // 列主序: rotation[col][row]
+            w = (rotation[j][k] - rotation[k][j]) * root;
+            *apkQuat[j] = (rotation[i][j] + rotation[j][i]) * root;
+            *apkQuat[k] = (rotation[i][k] + rotation[k][i]) * root;
         }
     }
 
-    // 转换为旋转矩阵
+    // 转换为旋转矩阵 (列主序: kRot[col][row])
     void toRotationMatrix(Mat3T<T>& kRot) const {
         T _2x = x + x;
         T _2y = y + y;
         T _2z = z + z;
         T _2w = w + w;
 
+        // 列主序: kRot[col][row]
+        // 第0列
         kRot[0][0] = static_cast<T>(1) - _2y * y - _2z * z;
         kRot[0][1] = _2x * y + _2w * z;
         kRot[0][2] = _2x * z - _2w * y;
+        // 第1列
         kRot[1][0] = _2x * y - _2w * z;
         kRot[1][1] = static_cast<T>(1) - _2x * x - _2z * z;
         kRot[1][2] = _2y * z + _2w * x;
+        // 第2列
         kRot[2][0] = _2x * z + _2w * y;
         kRot[2][1] = _2y * z - _2w * x;
         kRot[2][2] = static_cast<T>(1) - _2x * x - _2y * y;
@@ -98,18 +107,23 @@ public:
         T _2z = z + z;
         T _2w = w + w;
 
+        // 列主序: kRot[col][row]
+        // 第0列
         kRot[0][0] = static_cast<T>(1) - _2y * y - _2z * z;
         kRot[0][1] = _2x * y + _2w * z;
         kRot[0][2] = _2x * z - _2w * y;
         kRot[0][3] = static_cast<T>(0);
+        // 第1列
         kRot[1][0] = _2x * y - _2w * z;
         kRot[1][1] = static_cast<T>(1) - _2x * x - _2z * z;
         kRot[1][2] = _2y * z + _2w * x;
         kRot[1][3] = static_cast<T>(0);
+        // 第2列
         kRot[2][0] = _2x * z + _2w * y;
         kRot[2][1] = _2y * z - _2w * x;
         kRot[2][2] = static_cast<T>(1) - _2x * x - _2y * y;
         kRot[2][3] = static_cast<T>(0);
+        // 第3列
         kRot[3][0] = static_cast<T>(0);
         kRot[3][1] = static_cast<T>(0);
         kRot[3][2] = static_cast<T>(0);
@@ -142,21 +156,23 @@ public:
         }
     }
 
-    // 从轴构造
+    // 从轴构造 (列主序: rot[col][row])
     void fromAxes(const Vec3T<T>& xaxis, const Vec3T<T>& yaxis, const Vec3T<T>& zaxis) {
         Mat3T<T> rot;
-        rot[0][0] = xaxis.x; rot[1][0] = xaxis.y; rot[2][0] = xaxis.z;
-        rot[0][1] = yaxis.x; rot[1][1] = yaxis.y; rot[2][1] = yaxis.z;
-        rot[0][2] = zaxis.x; rot[1][2] = zaxis.y; rot[2][2] = zaxis.z;
+        // 列主序: 每个轴向量存储为一列
+        rot[0][0] = xaxis.x; rot[0][1] = xaxis.y; rot[0][2] = xaxis.z;
+        rot[1][0] = yaxis.x; rot[1][1] = yaxis.y; rot[1][2] = yaxis.z;
+        rot[2][0] = zaxis.x; rot[2][1] = zaxis.y; rot[2][2] = zaxis.z;
         fromRotationMatrix(rot);
     }
 
     void toAxes(Vec3T<T>& xaxis, Vec3T<T>& yaxis, Vec3T<T>& zaxis) const {
         Mat3T<T> rot;
         toRotationMatrix(rot);
-        xaxis.x = rot[0][0]; xaxis.y = rot[1][0]; xaxis.z = rot[2][0];
-        yaxis.x = rot[0][1]; yaxis.y = rot[1][1]; yaxis.z = rot[2][1];
-        zaxis.x = rot[0][2]; zaxis.y = rot[1][2]; zaxis.z = rot[2][2];
+        // 列主序: 每列为一个轴向量
+        xaxis.x = rot[0][0]; xaxis.y = rot[0][1]; xaxis.z = rot[0][2];
+        yaxis.x = rot[1][0]; yaxis.y = rot[1][1]; yaxis.z = rot[1][2];
+        zaxis.x = rot[2][0]; zaxis.y = rot[2][1]; zaxis.z = rot[2][2];
     }
 
     // 获取各轴

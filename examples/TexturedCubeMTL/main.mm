@@ -472,13 +472,13 @@ int main()
             Uniforms uniforms;
             
             // 模型矩阵 - 旋转立方体
-            uniforms.modelMatrix = Mat4f::rotateY(rotationAngle) * Mat4f::rotateX(rotationAngle * 0.5f).transpose();
+            uniforms.modelMatrix = Mat4f::rotateY(rotationAngle) * Mat4f::rotateX(rotationAngle * 0.5f);
             
             // 视图矩阵 - 相机位置（从外部观察立方体）
             Vec3f eye(0.0f, 0.0f, 3.0f);  // 相机在立方体前方，距离3个单位
             Vec3f center(0.0f, 0.0f, 0.0f);  // 看向立方体中心
             Vec3f up(0.0f, 1.0f, 0.0f);
-            uniforms.viewMatrix = Mat4f::lookAt(eye, center, up).transpose();
+            uniforms.viewMatrix = Mat4f::lookAt(eye, center, up);
             
             // 投影矩阵 - 透视投影（far改回100，避免深度精度问题）
             float aspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);

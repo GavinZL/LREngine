@@ -685,7 +685,7 @@ int main()
             Vec3f eye(0.0f, 0.0f, 20.0f);
             Vec3f center(0.0f, 0.0f, 0.0f);
             Vec3f up(0.0f, 1.0f, 0.0f);
-            Mat4f viewMatrix = Mat4f::lookAt(eye, center, up).transpose();
+            Mat4f viewMatrix = Mat4f::lookAt(eye, center, up);
             
             float aspect = static_cast<float>(OFFSCREEN_WIDTH) / static_cast<float>(OFFSCREEN_HEIGHT);
             Mat4f projectionMatrix = Mat4f::perspective(45.0f * 3.14159f / 180.0f, aspect, 0.1f, 100.0f);
@@ -695,7 +695,7 @@ int main()
                 CubeUniforms uniforms;
                 Mat4f translation = Mat4f::translate(Vec3f(-2.5f, 0.0f, 0.0f));
                 Mat4f rotation = Mat4f::rotateY(rotationAngle);
-                uniforms.modelMatrix = (translation * rotation).transpose();
+                uniforms.modelMatrix = (translation * rotation);
                 uniforms.viewMatrix = viewMatrix;
                 uniforms.projectionMatrix = projectionMatrix;
                 
@@ -709,7 +709,7 @@ int main()
                 CubeUniforms uniforms;
                 Mat4f scale = Mat4f::scale(Vec3f(1.3f, 1.3f, 1.3f));
                 Mat4f rotation = Mat4f::rotateX(rotationAngle * 1.5f);
-                uniforms.modelMatrix = (scale * rotation).transpose();
+                uniforms.modelMatrix = (scale * rotation);
                 uniforms.viewMatrix = viewMatrix;
                 uniforms.projectionMatrix = projectionMatrix;
                 
@@ -724,7 +724,7 @@ int main()
                 Mat4f translation = Mat4f::translate(Vec3f(2.5f, 0.0f, 0.0f));
                 Mat4f scale = Mat4f::scale(Vec3f(0.7f, 0.7f, 0.7f));
                 Mat4f rotation = Mat4f::rotateZ(rotationAngle * 2.0f);
-                uniforms.modelMatrix = (translation * scale * rotation).transpose();
+                uniforms.modelMatrix = (translation * scale * rotation);
                 uniforms.viewMatrix = viewMatrix;
                 uniforms.projectionMatrix = projectionMatrix;
                 

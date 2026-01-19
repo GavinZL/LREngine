@@ -470,13 +470,13 @@ static Vertex cubeVertices[] = {
         
         // 模型矩阵 - 旋转立方体
         uniforms.modelMatrix = Mat4f::rotateY(_rotationAngle) * 
-                               Mat4f::rotateX(_rotationAngle * 0.5f).transpose();
+                               Mat4f::rotateX(_rotationAngle * 0.5f);
         
         // 视图矩阵 - 相机位置
         Vec3f eye(0.0f, 0.0f, 6.0f);
         Vec3f center(0.0f, 0.0f, 0.0f);
         Vec3f up(0.0f, 1.0f, 0.0f);
-        uniforms.viewMatrix = Mat4f::lookAt(eye, center, up).transpose();
+        uniforms.viewMatrix = Mat4f::lookAt(eye, center, up);
         
         // 投影矩阵 - 透视投影
         float aspect = static_cast<float>(_width) / static_cast<float>(_height);

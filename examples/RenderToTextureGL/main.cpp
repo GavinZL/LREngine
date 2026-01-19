@@ -709,8 +709,8 @@ int main()
             Mat4f rotation = Mat4f::rotateY(rotationAngle);
             Mat4f modelMatrix = translation * rotation;
             
-            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", modelMatrix, true);
-            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", viewMatrix, true);
+            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", modelMatrix, false);
+            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", viewMatrix, false);
             cubePipelineState->GetShaderProgram()->SetUniformMatrix4("projectionMatrix", projectionMatrix, false);
             cubePipelineState->GetShaderProgram()->SetUniform("colorTexture", 0);
             
@@ -725,8 +725,8 @@ int main()
             Mat4f rotation = Mat4f::rotateX(rotationAngle * 1.5f);
             Mat4f modelMatrix = scale * rotation;
             
-            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", modelMatrix, true);
-            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", viewMatrix, true);
+            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", modelMatrix, false);
+            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", viewMatrix, false);
             cubePipelineState->GetShaderProgram()->SetUniformMatrix4("projectionMatrix", projectionMatrix, false);
             cubePipelineState->GetShaderProgram()->SetUniform("colorTexture", 0);
             
@@ -742,8 +742,8 @@ int main()
             Mat4f rotation = Mat4f::rotateZ(rotationAngle * 2.0f);
             Mat4f modelMatrix = translation * scale * rotation;
             
-            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", modelMatrix, true);
-            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", viewMatrix, true);
+            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", modelMatrix, false);
+            cubePipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", viewMatrix, false);
             cubePipelineState->GetShaderProgram()->SetUniformMatrix4("projectionMatrix", projectionMatrix, false);
             cubePipelineState->GetShaderProgram()->SetUniform("colorTexture", 0);
             
