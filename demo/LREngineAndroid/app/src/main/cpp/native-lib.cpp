@@ -116,10 +116,15 @@ layout(location = 1) in vec3 aColor;
 
 out vec3 vColor;
 
-uniform mat4 uMVP;
+// 分离的矩阵uniform，便于调试
+uniform mat4 modelMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
 
 void main() {
-    gl_Position = uMVP * vec4(aPosition, 1.0);
+    // 在shader内计算MVP（标准OpenGL顺序）
+    mat4 mvp = projectionMatrix * viewMatrix * modelMatrix;
+    gl_Position = mvp * vec4(aPosition, 1.0);
     vColor = aColor;
 }
 )";
@@ -135,10 +140,7 @@ void main() {
 }
 )";
 
-// ===========================================================================
-// 立方体顶点数据
-// ===========================================================================
-
+// ============ 立方体顶点数据 ============
 // 立方体顶点数据：位置(xyz) + 颜色(rgb)
 static const float CUBE_VERTICES[] = {
     // 前面 - 红色
@@ -425,7 +427,7 @@ static bool InitRenderResources() {
     psoDesc.depthStencilState.depthCompareFunc = CompareFunc::Less;
     
     // 背面剔除
-    psoDesc.rasterizerState.cullMode = CullMode::Back;
+    psoDesc.rasterizerState.cullMode = CullMode::None;
     psoDesc.rasterizerState.frontFace = FrontFace::CCW;
     
     psoDesc.primitiveType = PrimitiveType::Triangles;
@@ -439,6 +441,7 @@ static bool InitRenderResources() {
     LOGI("Pipeline state created");
     
     LOGI("All render resources initialized successfully");
+    
     return true;
 }
 
@@ -576,7 +579,7 @@ Java_com_example_lrenginedemo_LREngineRenderer_nativeRender(
     g_renderContext->BeginRenderPass(nullptr);
     
     // 清除缓冲区
-    g_renderContext->Clear(ClearColor | ClearDepth, 0.15f, 0.15f, 0.9f, 1.0f, 1.0f, 0);
+    g_renderContext->Clear(ClearColor | ClearDepth, 0.15f, 0.15f, 0.1f, 1.0f, 1.0f, 0);
     
     // 设置视口
     g_renderContext->SetViewport(0, 0, g_width, g_height);
@@ -588,30 +591,27 @@ Java_com_example_lrenginedemo_LREngineRenderer_nativeRender(
     g_renderContext->SetVertexBuffer(g_vertexBuffer, 0);
     g_renderContext->SetIndexBuffer(g_indexBuffer);
     
-    // 计算MVP矩阵 - 使用LREngine的Mat4T类
+    // 计算各个矩阵
     float aspect = static_cast<float>(g_width) / static_cast<float>(g_height);
     float fovY = 45.0f * AAPI / 180.0f;
     
-    // 使用LREngine的矩阵工厂方法
     Mat4 projection = Mat4::perspective(fovY, aspect, 0.1f, 100.0f);
-    Mat4 view = Mat4::lookAt(Vec3(0.0f, 0.0f, 6.0f), Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f));
+    Mat4 view = Mat4::lookAt(Vec3(0.0f, 0.0f, 5.0f), Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 1.0f, 0.0f));
+    
     Mat4 modelY = Mat4::rotateY(g_rotationAngle);
     Mat4 modelX = Mat4::rotateX(g_rotationAngle * 0.5f);
     Mat4 model = modelY * modelX;
-    Mat4 mvp = projection * view * model;
     
-    // 设置MVP矩阵Uniform
-    g_pipelineState->GetShaderProgram()->SetUniformMatrix4("uMVP", mvp, false);
+    // 分别传递三个矩阵，在shader内计算MVP
+    // 此处注意， mat4 是按行主序， 但perspective 是按列主序， 导致矩阵有点奇怪 ， 需要统一
+    g_pipelineState->GetShaderProgram()->SetUniformMatrix4("modelMatrix", model, true);
+    g_pipelineState->GetShaderProgram()->SetUniformMatrix4("viewMatrix", view, true);
+    g_pipelineState->GetShaderProgram()->SetUniformMatrix4("projectionMatrix", projection, false);
     
-
-    // 检查深度测试状态
-    GLboolean depthTestEnabled = GL_FALSE;
-    GLboolean depthWriteEnabled = GL_FALSE;
-    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
-    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthWriteEnabled);
-    LOGW("Depth: test=%d, write=%d", depthTestEnabled, depthWriteEnabled);
-
-
+    if (g_frameCount % 100 == 1) {
+        LOGW("Matrices set: model, view, projection (transpose=false)");
+    }
+    
     // 绘制立方体
     g_renderContext->DrawIndexed(0, 36);
     
