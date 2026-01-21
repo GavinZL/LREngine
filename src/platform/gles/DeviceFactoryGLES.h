@@ -17,19 +17,19 @@ namespace render {
  */
 class DeviceFactoryGLES : public LRDeviceFactory {
 public:
-    DeviceFactoryGLES() = default;
+    DeviceFactoryGLES()           = default;
     ~DeviceFactoryGLES() override = default;
-    
+
     /**
      * @brief 创建OpenGL ES渲染上下文实现
      */
     IRenderContextImpl* CreateRenderContextImpl() override;
-    
+
     /**
      * @brief 获取后端类型
      */
     Backend GetBackend() const override { return Backend::OpenGLES; }
-    
+
     /**
      * @brief 检查OpenGL ES是否可用
      */

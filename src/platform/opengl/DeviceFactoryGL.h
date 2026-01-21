@@ -17,9 +17,9 @@ namespace render {
  */
 class DeviceFactoryGL : public LRDeviceFactory {
 public:
-    DeviceFactoryGL() = default;
+    DeviceFactoryGL()           = default;
     ~DeviceFactoryGL() override = default;
-    
+
     IRenderContextImpl* CreateRenderContextImpl() override;
     Backend GetBackend() const override { return Backend::OpenGL; }
     bool IsAvailable() const override;

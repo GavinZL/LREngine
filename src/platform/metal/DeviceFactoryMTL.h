@@ -17,9 +17,9 @@ namespace render {
  */
 class DeviceFactoryMTL : public LRDeviceFactory {
 public:
-    DeviceFactoryMTL() = default;
+    DeviceFactoryMTL()           = default;
     ~DeviceFactoryMTL() override = default;
-    
+
     IRenderContextImpl* CreateRenderContextImpl() override;
     Backend GetBackend() const override { return Backend::Metal; }
     bool IsAvailable() const override;

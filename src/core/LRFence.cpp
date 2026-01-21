@@ -10,9 +10,7 @@
 namespace lrengine {
 namespace render {
 
-LRFence::LRFence()
-    : LRResource(ResourceType::Fence) {
-}
+LRFence::LRFence() : LRResource(ResourceType::Fence) {}
 
 LRFence::~LRFence() {
     if (mImpl) {
@@ -27,16 +25,16 @@ bool LRFence::Initialize(IFenceImpl* impl) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "Fence implementation is null");
         return false;
     }
-    
+
     mImpl = impl;
-    
+
     if (!mImpl->Create()) {
         LR_SET_ERROR(ErrorCode::ResourceCreationFailed, "Failed to create fence");
         delete mImpl;
         mImpl = nullptr;
         return false;
     }
-    
+
     mIsValid = true;
     return true;
 }
@@ -52,7 +50,7 @@ bool LRFence::Wait(uint64_t timeoutNs) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "Fence is not valid");
         return false;
     }
-    
+
     return mImpl->Wait(timeoutNs);
 }
 
@@ -60,7 +58,7 @@ FenceStatus LRFence::GetStatus() const {
     if (!mImpl || !mIsValid) {
         return FenceStatus::Error;
     }
-    
+
     return mImpl->GetStatus();
 }
 

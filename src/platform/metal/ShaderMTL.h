@@ -80,7 +80,7 @@ public:
     // Metal特有方法
     id<MTLFunction> GetVertexFunction() const { return m_vertexFunction; }
     id<MTLFunction> GetFragmentFunction() const { return m_fragmentFunction; }
-    
+
     // Uniform缓冲区管理
     id<MTLBuffer> GetUniformBuffer() const { return m_uniformBuffer; }
     void UpdateUniforms();
@@ -92,10 +92,10 @@ private:
     id<MTLFunction> m_vertexFunction;
     id<MTLFunction> m_fragmentFunction;
     id<MTLBuffer> m_uniformBuffer;
-    
+
     bool m_linked;
     std::string m_linkError;
-    
+
     // Uniform数据存储
     struct UniformData {
         size_t offset;

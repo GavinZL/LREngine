@@ -18,25 +18,16 @@ namespace gl {
 // ShaderGL
 // ============================================================================
 
-ShaderGL::ShaderGL()
-    : m_shaderID(0)
-    , m_stage(ShaderStage::Vertex)
-    , m_compiled(false)
-{
-}
+ShaderGL::ShaderGL() : m_shaderID(0), m_stage(ShaderStage::Vertex), m_compiled(false) {}
 
-ShaderGL::~ShaderGL()
-{
-    Destroy();
-}
+ShaderGL::~ShaderGL() { Destroy(); }
 
-bool ShaderGL::Compile(const ShaderDescriptor& desc)
-{
+bool ShaderGL::Compile(const ShaderDescriptor& desc) {
     if (m_shaderID != 0) {
         Destroy();
     }
 
-    m_stage = desc.stage;
+    m_stage           = desc.stage;
     GLenum shaderType = ToGLShaderStage(desc.stage);
 
     m_shaderID = glCreateShader(shaderType);
@@ -50,7 +41,8 @@ bool ShaderGL::Compile(const ShaderDescriptor& desc)
     glShaderSource(m_shaderID, 1, &sourcePtr, nullptr);
     glCompileShader(m_shaderID);
 
-    LR_LOG_DEBUG_F("OpenGL CompileShader: stage=%d, name=%s", (int)desc.stage, desc.debugName ? desc.debugName : "unknown");
+    LR_LOG_DEBUG_F("OpenGL CompileShader: stage=%d, name=%s", (int)desc.stage,
+                   desc.debugName ? desc.debugName : "unknown");
 
     GLint success;
     glGetShaderiv(m_shaderID, GL_COMPILE_STATUS, &success);
@@ -58,7 +50,7 @@ bool ShaderGL::Compile(const ShaderDescriptor& desc)
     if (!success) {
         GLint logLength;
         glGetShaderiv(m_shaderID, GL_INFO_LOG_LENGTH, &logLength);
-        
+
         if (logLength > 0) {
             std::vector<char> log(logLength);
             glGetShaderInfoLog(m_shaderID, logLength, nullptr, log.data());
@@ -79,8 +71,7 @@ bool ShaderGL::Compile(const ShaderDescriptor& desc)
     return true;
 }
 
-void ShaderGL::Destroy()
-{
+void ShaderGL::Destroy() {
     if (m_shaderID != 0) {
         glDeleteShader(m_shaderID);
         m_shaderID = 0;
@@ -88,23 +79,13 @@ void ShaderGL::Destroy()
     m_compiled = false;
 }
 
-bool ShaderGL::IsCompiled() const
-{
-    return m_compiled;
-}
+bool ShaderGL::IsCompiled() const { return m_compiled; }
 
-const char* ShaderGL::GetCompileError() const
-{
-    return m_compileError.c_str();
-}
+const char* ShaderGL::GetCompileError() const { return m_compileError.c_str(); }
 
-ShaderStage ShaderGL::GetStage() const
-{
-    return m_stage;
-}
+ShaderStage ShaderGL::GetStage() const { return m_stage; }
 
-ResourceHandle ShaderGL::GetNativeHandle() const
-{
+ResourceHandle ShaderGL::GetNativeHandle() const {
     ResourceHandle handle;
     handle.glHandle = m_shaderID;
     return handle;
@@ -114,19 +95,11 @@ ResourceHandle ShaderGL::GetNativeHandle() const
 // ShaderProgramGL
 // ============================================================================
 
-ShaderProgramGL::ShaderProgramGL()
-    : m_programID(0)
-    , m_linked(false)
-{
-}
+ShaderProgramGL::ShaderProgramGL() : m_programID(0), m_linked(false) {}
 
-ShaderProgramGL::~ShaderProgramGL()
-{
-    Destroy();
-}
+ShaderProgramGL::~ShaderProgramGL() { Destroy(); }
 
-bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
-{
+bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count) {
     if (m_programID != 0) {
         Destroy();
     }
@@ -149,7 +122,7 @@ bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
         if (shaders[i] == nullptr) {
             continue;
         }
-        
+
         ShaderGL* glShader = static_cast<ShaderGL*>(shaders[i]);
         if (!glShader->IsCompiled()) {
             m_linkError = "Attempting to link with uncompiled shader";
@@ -158,7 +131,7 @@ bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
             m_programID = 0;
             return false;
         }
-        
+
         glAttachShader(m_programID, glShader->GetShaderID());
     }
 
@@ -173,7 +146,7 @@ bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
     if (!success) {
         GLint logLength;
         glGetProgramiv(m_programID, GL_INFO_LOG_LENGTH, &logLength);
-        
+
         if (logLength > 0) {
             std::vector<char> log(logLength);
             glGetProgramInfoLog(m_programID, logLength, nullptr, log.data());
@@ -203,8 +176,7 @@ bool ShaderProgramGL::Link(IShaderImpl** shaders, uint32_t count)
     return true;
 }
 
-void ShaderProgramGL::Destroy()
-{
+void ShaderProgramGL::Destroy() {
     if (m_programID != 0) {
         glDeleteProgram(m_programID);
         m_programID = 0;
@@ -212,90 +184,73 @@ void ShaderProgramGL::Destroy()
     m_linked = false;
 }
 
-bool ShaderProgramGL::IsLinked() const
-{
-    return m_linked;
-}
+bool ShaderProgramGL::IsLinked() const { return m_linked; }
 
-const char* ShaderProgramGL::GetLinkError() const
-{
-    return m_linkError.c_str();
-}
+const char* ShaderProgramGL::GetLinkError() const { return m_linkError.c_str(); }
 
-void ShaderProgramGL::Use()
-{
+void ShaderProgramGL::Use() {
     if (m_programID != 0) {
         glUseProgram(m_programID);
         LR_LOG_DEBUG_F("OpenGL UseProgram: %d", m_programID);
     }
 }
 
-int32_t ShaderProgramGL::GetUniformLocation(const char* name)
-{
+int32_t ShaderProgramGL::GetUniformLocation(const char* name) {
     if (m_programID == 0 || name == nullptr) {
         return -1;
     }
     return glGetUniformLocation(m_programID, name);
 }
 
-void ShaderProgramGL::SetUniform1i(int32_t location, int32_t value)
-{
+void ShaderProgramGL::SetUniform1i(int32_t location, int32_t value) {
     if (location >= 0) {
         glUniform1i(location, value);
     }
 }
 
-void ShaderProgramGL::SetUniform1f(int32_t location, float value)
-{
+void ShaderProgramGL::SetUniform1f(int32_t location, float value) {
     if (location >= 0) {
         glUniform1f(location, value);
     }
 }
 
-void ShaderProgramGL::SetUniform2f(int32_t location, float x, float y)
-{
+void ShaderProgramGL::SetUniform2f(int32_t location, float x, float y) {
     if (location >= 0) {
         glUniform2f(location, x, y);
     }
 }
 
-void ShaderProgramGL::SetUniform3f(int32_t location, float x, float y, float z)
-{
+void ShaderProgramGL::SetUniform3f(int32_t location, float x, float y, float z) {
     if (location >= 0) {
         glUniform3f(location, x, y, z);
     }
 }
 
-void ShaderProgramGL::SetUniform4f(int32_t location, float x, float y, float z, float w)
-{
+void ShaderProgramGL::SetUniform4f(int32_t location, float x, float y, float z, float w) {
     if (location >= 0) {
         glUniform4f(location, x, y, z, w);
     }
 }
 
-void ShaderProgramGL::SetUniformMatrix3fv(int32_t location, const float* value, bool transpose)
-{
+void ShaderProgramGL::SetUniformMatrix3fv(int32_t location, const float* value, bool transpose) {
     if (location >= 0 && value != nullptr) {
         glUniformMatrix3fv(location, 1, transpose ? GL_TRUE : GL_FALSE, value);
     }
 }
 
-void ShaderProgramGL::SetUniformMatrix4fv(int32_t location, const float* value, bool transpose)
-{
+void ShaderProgramGL::SetUniformMatrix4fv(int32_t location, const float* value, bool transpose) {
     if (location >= 0 && value != nullptr) {
         glUniformMatrix4fv(location, 1, transpose ? GL_TRUE : GL_FALSE, value);
     }
 }
 
-ResourceHandle ShaderProgramGL::GetNativeHandle() const
-{
+ResourceHandle ShaderProgramGL::GetNativeHandle() const {
     ResourceHandle handle;
     handle.glHandle = m_programID;
     return handle;
 }
 
-void ShaderProgramGL::BindUniformBlock(const char* blockName, uint32_t bindingPoint)
-{
+void ShaderProgramGL::BindUniformBlock(const char* blockName, uint32_t bindingPoint) {
     if (m_programID == 0 || blockName == nullptr) {
         return;
     }

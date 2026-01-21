@@ -33,7 +33,7 @@ public:
     // Metal特有方法
     id<MTLRenderPipelineState> GetPipelineState() const { return m_pipelineState; }
     id<MTLDepthStencilState> GetDepthStencilState() const { return m_depthStencilState; }
-    
+
     MTLCullMode GetCullMode() const { return m_cullMode; }
     MTLWinding GetFrontFace() const { return m_frontFace; }
     MTLTriangleFillMode GetFillMode() const { return m_fillMode; }
@@ -45,9 +45,9 @@ private:
     id<MTLDevice> m_device;
     id<MTLRenderPipelineState> m_pipelineState;
     id<MTLDepthStencilState> m_depthStencilState;
-    
+
     PrimitiveType m_primitiveType;
-    
+
     // 光栅化状态（需要在编码时设置）
     MTLCullMode m_cullMode;
     MTLWinding m_frontFace;

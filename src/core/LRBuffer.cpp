@@ -14,9 +14,7 @@ namespace render {
 // LRBuffer
 // =============================================================================
 
-LRBuffer::LRBuffer()
-    : LRResource(ResourceType::Buffer) {
-}
+LRBuffer::LRBuffer() : LRResource(ResourceType::Buffer) {}
 
 LRBuffer::~LRBuffer() {
     if (mImpl) {
@@ -31,25 +29,25 @@ bool LRBuffer::Initialize(IBufferImpl* impl, const BufferDescriptor& desc) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "Buffer implementation is null");
         return false;
     }
-    
+
     mImpl = impl;
-    
+
     if (!mImpl->Create(desc)) {
         LR_SET_ERROR(ErrorCode::ResourceCreationFailed, "Failed to create buffer");
         delete mImpl;
         mImpl = nullptr;
         return false;
     }
-    
-    mSize = desc.size;
-    mUsage = desc.usage;
+
+    mSize       = desc.size;
+    mUsage      = desc.usage;
     mBufferType = desc.type;
-    mIsValid = true;
-    
+    mIsValid    = true;
+
     if (desc.debugName) {
         SetDebugName(desc.debugName);
     }
-    
+
     return true;
 }
 
@@ -58,12 +56,12 @@ void LRBuffer::UpdateData(const void* data, size_t size, size_t offset) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "Buffer is not valid");
         return;
     }
-    
+
     if (offset + size > mSize) {
         LR_SET_ERROR(ErrorCode::BufferTooSmall, "Update size exceeds buffer size");
         return;
     }
-    
+
     mImpl->UpdateData(data, size, offset);
 }
 
@@ -72,7 +70,7 @@ void* LRBuffer::Map(MemoryAccess access) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "Buffer is not valid");
         return nullptr;
     }
-    
+
     return mImpl->Map(access);
 }
 
@@ -105,21 +103,20 @@ ResourceHandle LRBuffer::GetNativeHandle() const {
 // LRVertexBuffer
 // =============================================================================
 
-LRVertexBuffer::LRVertexBuffer()
-    : LRBuffer() {
+LRVertexBuffer::LRVertexBuffer() : LRBuffer() {
     mResourceType = ResourceType::VertexBuffer;
-    mBufferType = BufferType::Vertex;
+    mBufferType   = BufferType::Vertex;
 }
 
 bool LRVertexBuffer::Initialize(IBufferImpl* impl, const BufferDescriptor& desc) {
     BufferDescriptor vertexDesc = desc;
-    vertexDesc.type = BufferType::Vertex;
+    vertexDesc.type             = BufferType::Vertex;
     return LRBuffer::Initialize(impl, vertexDesc);
 }
 
 void LRVertexBuffer::SetVertexLayout(const VertexLayoutDescriptor& layout) {
     mVertexLayout = layout;
-    
+
     // 将布局传递给平台实现
     if (mImpl) {
         mImpl->SetVertexLayout(layout);
@@ -137,19 +134,18 @@ uint32_t LRVertexBuffer::GetVertexCount() const {
 // LRIndexBuffer
 // =============================================================================
 
-LRIndexBuffer::LRIndexBuffer()
-    : LRBuffer() {
+LRIndexBuffer::LRIndexBuffer() : LRBuffer() {
     mResourceType = ResourceType::IndexBuffer;
-    mBufferType = BufferType::Index;
+    mBufferType   = BufferType::Index;
 }
 
 bool LRIndexBuffer::Initialize(IBufferImpl* impl, const BufferDescriptor& desc) {
     BufferDescriptor indexDesc = desc;
-    indexDesc.type = BufferType::Index;
-    
+    indexDesc.type             = BufferType::Index;
+
     // 从描述符读取索引类型！
     mIndexType = desc.indexType;
-    
+
     return LRBuffer::Initialize(impl, indexDesc);
 }
 
@@ -162,15 +158,14 @@ uint32_t LRIndexBuffer::GetIndexCount() const {
 // LRUniformBuffer
 // =============================================================================
 
-LRUniformBuffer::LRUniformBuffer()
-    : LRBuffer() {
+LRUniformBuffer::LRUniformBuffer() : LRBuffer() {
     mResourceType = ResourceType::UniformBuffer;
-    mBufferType = BufferType::Uniform;
+    mBufferType   = BufferType::Uniform;
 }
 
 bool LRUniformBuffer::Initialize(IBufferImpl* impl, const BufferDescriptor& desc) {
     BufferDescriptor uniformDesc = desc;
-    uniformDesc.type = BufferType::Uniform;
+    uniformDesc.type             = BufferType::Uniform;
     return LRBuffer::Initialize(impl, uniformDesc);
 }
 

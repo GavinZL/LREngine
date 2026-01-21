@@ -23,8 +23,8 @@ namespace gl {
  */
 class StateCacheGL {
 public:
-    static constexpr uint32_t MAX_TEXTURE_UNITS = 16;
-    static constexpr uint32_t MAX_VERTEX_ATTRIBS = 16;
+    static constexpr uint32_t MAX_TEXTURE_UNITS   = 16;
+    static constexpr uint32_t MAX_VERTEX_ATTRIBS  = 16;
     static constexpr uint32_t MAX_UNIFORM_BUFFERS = 16;
 
     StateCacheGL();
@@ -32,7 +32,7 @@ public:
 
     // 重置所有缓存状态
     void Reset();
-    
+
     // 使缓存失效（通常在上下文切换后调用）
     void Invalidate();
 

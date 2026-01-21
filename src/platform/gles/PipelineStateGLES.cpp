@@ -13,30 +13,19 @@ namespace lrengine {
 namespace render {
 namespace gles {
 
-PipelineStateGLES::PipelineStateGLES()
-    : m_valid(false)
-{
-}
+PipelineStateGLES::PipelineStateGLES() : m_valid(false) {}
 
-PipelineStateGLES::~PipelineStateGLES()
-{
-    Destroy();
-}
+PipelineStateGLES::~PipelineStateGLES() { Destroy(); }
 
-bool PipelineStateGLES::Create(const PipelineStateDescriptor& desc)
-{
-    m_desc = desc;
+bool PipelineStateGLES::Create(const PipelineStateDescriptor& desc) {
+    m_desc  = desc;
     m_valid = true;
     return true;
 }
 
-void PipelineStateGLES::Destroy()
-{
-    m_valid = false;
-}
+void PipelineStateGLES::Destroy() { m_valid = false; }
 
-void PipelineStateGLES::Apply()
-{
+void PipelineStateGLES::Apply() {
     if (!m_valid) {
         return;
     }
@@ -46,53 +35,43 @@ void PipelineStateGLES::Apply()
     ApplyRasterizerState();
 }
 
-void PipelineStateGLES::ApplyBlendState()
-{
+void PipelineStateGLES::ApplyBlendState() {
     const BlendStateDescriptor& blend = m_desc.blendState;
 
     if (blend.enabled) {
         glEnable(GL_BLEND);
-        glBlendFuncSeparate(
-            ToGLESBlendFactor(blend.srcColorFactor),
-            ToGLESBlendFactor(blend.dstColorFactor),
-            ToGLESBlendFactor(blend.srcAlphaFactor),
-            ToGLESBlendFactor(blend.dstAlphaFactor)
-        );
-        glBlendEquationSeparate(
-            ToGLESBlendOp(blend.colorOp),
-            ToGLESBlendOp(blend.alphaOp)
-        );
+        glBlendFuncSeparate(ToGLESBlendFactor(blend.srcColorFactor),
+                            ToGLESBlendFactor(blend.dstColorFactor),
+                            ToGLESBlendFactor(blend.srcAlphaFactor),
+                            ToGLESBlendFactor(blend.dstAlphaFactor));
+        glBlendEquationSeparate(ToGLESBlendOp(blend.colorOp), ToGLESBlendOp(blend.alphaOp));
     } else {
         glDisable(GL_BLEND);
     }
 
     // 颜色写入掩码
-    glColorMask(
-        (blend.colorWriteMask & ColorMask_R) ? GL_TRUE : GL_FALSE,
-        (blend.colorWriteMask & ColorMask_G) ? GL_TRUE : GL_FALSE,
-        (blend.colorWriteMask & ColorMask_B) ? GL_TRUE : GL_FALSE,
-        (blend.colorWriteMask & ColorMask_A) ? GL_TRUE : GL_FALSE
-    );
+    glColorMask((blend.colorWriteMask & ColorMask_R) ? GL_TRUE : GL_FALSE,
+                (blend.colorWriteMask & ColorMask_G) ? GL_TRUE : GL_FALSE,
+                (blend.colorWriteMask & ColorMask_B) ? GL_TRUE : GL_FALSE,
+                (blend.colorWriteMask & ColorMask_A) ? GL_TRUE : GL_FALSE);
 }
 
-void PipelineStateGLES::ApplyDepthStencilState()
-{
+void PipelineStateGLES::ApplyDepthStencilState() {
     const DepthStencilStateDescriptor& ds = m_desc.depthStencilState;
 
     // 重要：先设置深度写入，再设置深度测试
     // 因为 glClear(GL_DEPTH_BUFFER_BIT) 需要 glDepthMask(GL_TRUE) 才能生效
-    
+
     // 1. 深度写入
     glDepthMask(ds.depthWriteEnabled ? GL_TRUE : GL_FALSE);
-    LR_LOG_TRACE_F("[PipelineStateGLES] Depth Write: %s", 
+    LR_LOG_TRACE_F("[PipelineStateGLES] Depth Write: %s",
                    ds.depthWriteEnabled ? "ENABLED" : "DISABLED");
 
     // 2. 深度测试
     if (ds.depthTestEnabled) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(ToGLESCompareFunc(ds.depthCompareFunc));
-        LR_LOG_TRACE_F("[PipelineStateGLES] Depth Test ENABLED (func=%d)", 
-                       (int)ds.depthCompareFunc);
+        LR_LOG_TRACE_F("[PipelineStateGLES] Depth Test ENABLED (func=%d)", (int)ds.depthCompareFunc);
     } else {
         glDisable(GL_DEPTH_TEST);
         LR_LOG_TRACE("[PipelineStateGLES] Depth Test DISABLED");
@@ -101,34 +80,20 @@ void PipelineStateGLES::ApplyDepthStencilState()
     // 模板测试
     if (ds.stencilEnabled) {
         glEnable(GL_STENCIL_TEST);
-        
+
         // 前面模板
-        glStencilFuncSeparate(
-            GL_FRONT,
-            ToGLESCompareFunc(ds.frontFace.compareFunc),
-            ds.stencilRef,
-            ds.stencilReadMask
-        );
-        glStencilOpSeparate(
-            GL_FRONT,
-            ToGLESStencilOp(ds.frontFace.failOp),
-            ToGLESStencilOp(ds.frontFace.depthFailOp),
-            ToGLESStencilOp(ds.frontFace.passOp)
-        );
+        glStencilFuncSeparate(GL_FRONT, ToGLESCompareFunc(ds.frontFace.compareFunc), ds.stencilRef,
+                              ds.stencilReadMask);
+        glStencilOpSeparate(GL_FRONT, ToGLESStencilOp(ds.frontFace.failOp),
+                            ToGLESStencilOp(ds.frontFace.depthFailOp),
+                            ToGLESStencilOp(ds.frontFace.passOp));
 
         // 背面模板
-        glStencilFuncSeparate(
-            GL_BACK,
-            ToGLESCompareFunc(ds.backFace.compareFunc),
-            ds.stencilRef,
-            ds.stencilReadMask
-        );
-        glStencilOpSeparate(
-            GL_BACK,
-            ToGLESStencilOp(ds.backFace.failOp),
-            ToGLESStencilOp(ds.backFace.depthFailOp),
-            ToGLESStencilOp(ds.backFace.passOp)
-        );
+        glStencilFuncSeparate(GL_BACK, ToGLESCompareFunc(ds.backFace.compareFunc), ds.stencilRef,
+                              ds.stencilReadMask);
+        glStencilOpSeparate(GL_BACK, ToGLESStencilOp(ds.backFace.failOp),
+                            ToGLESStencilOp(ds.backFace.depthFailOp),
+                            ToGLESStencilOp(ds.backFace.passOp));
 
         glStencilMask(ds.stencilWriteMask);
     } else {
@@ -136,8 +101,7 @@ void PipelineStateGLES::ApplyDepthStencilState()
     }
 }
 
-void PipelineStateGLES::ApplyRasterizerState()
-{
+void PipelineStateGLES::ApplyRasterizerState() {
     const RasterizerStateDescriptor& raster = m_desc.rasterizerState;
 
     // 面剔除
@@ -192,13 +156,9 @@ void PipelineStateGLES::ApplyRasterizerState()
     glLineWidth(raster.lineWidth);
 }
 
-PrimitiveType PipelineStateGLES::GetPrimitiveType() const
-{
-    return m_desc.primitiveType;
-}
+PrimitiveType PipelineStateGLES::GetPrimitiveType() const { return m_desc.primitiveType; }
 
-ResourceHandle PipelineStateGLES::GetNativeHandle() const
-{
+ResourceHandle PipelineStateGLES::GetNativeHandle() const {
     ResourceHandle handle;
     handle.glHandle = 0; // OpenGL ES没有管线状态对象
     return handle;

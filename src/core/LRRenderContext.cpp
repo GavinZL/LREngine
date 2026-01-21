@@ -26,41 +26,39 @@ namespace render {
 
 LRRenderContext::LRRenderContext() = default;
 
-LRRenderContext::~LRRenderContext() {
-    Shutdown();
-}
+LRRenderContext::~LRRenderContext() { Shutdown(); }
 
 LRRenderContext* LRRenderContext::Create(const RenderContextDescriptor& desc) {
     LRRenderContext* context = new LRRenderContext();
-    
+
     if (!context->Initialize(desc)) {
         delete context;
         return nullptr;
     }
-    
+
     return context;
 }
 
-void LRRenderContext::Destroy(LRRenderContext* context) {
-    delete context;
-}
+void LRRenderContext::Destroy(LRRenderContext* context) { delete context; }
 
 bool LRRenderContext::Initialize(const RenderContextDescriptor& desc) {
-    LR_LOG_INFO_F("LRRenderContext::Initialize: backend=%d, size=%ux%u", (int)desc.backend, desc.width, desc.height);
+    LR_LOG_INFO_F("LRRenderContext::Initialize: backend=%d, size=%ux%u", (int)desc.backend,
+                  desc.width, desc.height);
     // 获取设备工厂
     LRDeviceFactory* factory = LRDeviceFactory::GetFactory(desc.backend);
     if (!factory) {
         LR_SET_ERROR(ErrorCode::BackendNotAvailable, "Backend not available");
         return false;
     }
-    
+
     // 创建渲染上下文实现
     mImpl = factory->CreateRenderContextImpl();
     if (!mImpl) {
-        LR_SET_ERROR(ErrorCode::ContextCreationFailed, "Failed to create render context implementation");
+        LR_SET_ERROR(ErrorCode::ContextCreationFailed,
+                     "Failed to create render context implementation");
         return false;
     }
-    
+
     // 初始化
     if (!mImpl->Initialize(desc)) {
         LR_SET_ERROR(ErrorCode::ContextCreationFailed, "Failed to initialize render context");
@@ -68,11 +66,11 @@ bool LRRenderContext::Initialize(const RenderContextDescriptor& desc) {
         mImpl = nullptr;
         return false;
     }
-    
+
     mBackend = desc.backend;
-    mWidth = desc.width;
-    mHeight = desc.height;
-    
+    mWidth   = desc.width;
+    mHeight  = desc.height;
+
     return true;
 }
 
@@ -93,18 +91,18 @@ LRBuffer* LRRenderContext::CreateBuffer(const BufferDescriptor& desc) {
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IBufferImpl* impl = mImpl->CreateBufferImpl();
     if (!impl) {
         return nullptr;
     }
-    
+
     LRBuffer* buffer = new LRBuffer();
     if (!buffer->Initialize(impl, desc)) {
         delete buffer;
         return nullptr;
     }
-    
+
     return buffer;
 }
 
@@ -113,18 +111,18 @@ LRVertexBuffer* LRRenderContext::CreateVertexBuffer(const BufferDescriptor& desc
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IBufferImpl* impl = mImpl->CreateBufferImpl(BufferType::Vertex);
     if (!impl) {
         return nullptr;
     }
-    
+
     LRVertexBuffer* buffer = new LRVertexBuffer();
     if (!buffer->Initialize(impl, desc)) {
         delete buffer;
         return nullptr;
     }
-    
+
     return buffer;
 }
 
@@ -133,18 +131,18 @@ LRIndexBuffer* LRRenderContext::CreateIndexBuffer(const BufferDescriptor& desc) 
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IBufferImpl* impl = mImpl->CreateBufferImpl(BufferType::Index);
     if (!impl) {
         return nullptr;
     }
-    
+
     LRIndexBuffer* buffer = new LRIndexBuffer();
     if (!buffer->Initialize(impl, desc)) {
         delete buffer;
         return nullptr;
     }
-    
+
     return buffer;
 }
 
@@ -153,18 +151,18 @@ LRUniformBuffer* LRRenderContext::CreateUniformBuffer(const BufferDescriptor& de
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IBufferImpl* impl = mImpl->CreateBufferImpl(BufferType::Uniform);
     if (!impl) {
         return nullptr;
     }
-    
+
     LRUniformBuffer* buffer = new LRUniformBuffer();
     if (!buffer->Initialize(impl, desc)) {
         delete buffer;
         return nullptr;
     }
-    
+
     return buffer;
 }
 
@@ -173,40 +171,40 @@ LRShader* LRRenderContext::CreateShader(const ShaderDescriptor& desc) {
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IShaderImpl* impl = mImpl->CreateShaderImpl();
     if (!impl) {
         return nullptr;
     }
-    
+
     LRShader* shader = new LRShader();
     if (!shader->Initialize(impl, desc)) {
         delete shader;
         return nullptr;
     }
-    
+
     return shader;
 }
 
 LRShaderProgram* LRRenderContext::CreateShaderProgram(LRShader* vertexShader,
-                                                     LRShader* fragmentShader,
-                                                     LRShader* geometryShader) {
+                                                      LRShader* fragmentShader,
+                                                      LRShader* geometryShader) {
     if (!mImpl) {
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IShaderProgramImpl* impl = mImpl->CreateShaderProgramImpl();
     if (!impl) {
         return nullptr;
     }
-    
+
     LRShaderProgram* program = new LRShaderProgram();
     if (!program->Initialize(impl, vertexShader, fragmentShader, geometryShader)) {
         delete program;
         return nullptr;
     }
-    
+
     return program;
 }
 
@@ -215,18 +213,18 @@ LRTexture* LRRenderContext::CreateTexture(const TextureDescriptor& desc) {
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     ITextureImpl* impl = mImpl->CreateTextureImpl();
     if (!impl) {
         return nullptr;
     }
-    
+
     LRTexture* texture = new LRTexture();
     if (!texture->Initialize(impl, desc)) {
         delete texture;
         return nullptr;
     }
-    
+
     return texture;
 }
 
@@ -235,18 +233,18 @@ LRFrameBuffer* LRRenderContext::CreateFrameBuffer(const FrameBufferDescriptor& d
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IFrameBufferImpl* impl = mImpl->CreateFrameBufferImpl();
     if (!impl) {
         return nullptr;
     }
-    
+
     LRFrameBuffer* frameBuffer = new LRFrameBuffer();
     if (!frameBuffer->Initialize(impl, desc)) {
         delete frameBuffer;
         return nullptr;
     }
-    
+
     return frameBuffer;
 }
 
@@ -255,7 +253,7 @@ LRPipelineState* LRRenderContext::CreatePipelineState(const PipelineStateDescrip
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     // 首先创建着色器程序（如果提供了着色器）
     LRShaderProgram* program = nullptr;
     if (desc.vertexShader && desc.fragmentShader) {
@@ -264,20 +262,20 @@ LRPipelineState* LRRenderContext::CreatePipelineState(const PipelineStateDescrip
             return nullptr;
         }
     }
-    
+
     IPipelineStateImpl* impl = mImpl->CreatePipelineStateImpl();
     if (!impl) {
         if (program) program->Release();
         return nullptr;
     }
-    
+
     LRPipelineState* pipelineState = new LRPipelineState();
     if (!pipelineState->Initialize(impl, desc, program)) {
         if (program) program->Release();
         delete pipelineState;
         return nullptr;
     }
-    
+
     return pipelineState;
 }
 
@@ -286,18 +284,18 @@ LRFence* LRRenderContext::CreateFence() {
         LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
         return nullptr;
     }
-    
+
     IFenceImpl* impl = mImpl->CreateFenceImpl();
     if (!impl) {
         return nullptr;
     }
-    
+
     LRFence* fence = new LRFence();
     if (!fence->Initialize(impl)) {
         delete fence;
         return nullptr;
     }
-    
+
     return fence;
 }
 
@@ -329,13 +327,13 @@ void LRRenderContext::Present() {
 
 void LRRenderContext::BeginRenderPass(LRFrameBuffer* frameBuffer) {
     mCurrentFrameBuffer = frameBuffer;
-    
+
     // 调用后端实现（Metal后端会使用此方法创建渲染通道）
     if (mImpl) {
         IFrameBufferImpl* fbImpl = frameBuffer ? frameBuffer->GetImpl() : nullptr;
         mImpl->BeginRenderPass(fbImpl);
     }
-    
+
     // 注意：不再调用frameBuffer->Bind()，避免在Metal后端重复创建渲染通道
     // OpenGL等后端在自己的BeginRenderPass实现中处理Bind逻辑
 }
@@ -345,7 +343,7 @@ void LRRenderContext::EndRenderPass() {
     if (mImpl) {
         mImpl->EndRenderPass();
     }
-    
+
     // 注意：不再调用frameBuffer->Unbind()，避免在Metal后端重复操作
     mCurrentFrameBuffer = nullptr;
 }
@@ -368,16 +366,16 @@ void LRRenderContext::SetScissor(int32_t x, int32_t y, int32_t width, int32_t he
 
 void LRRenderContext::SetPipelineState(LRPipelineState* pipelineState) {
     mCurrentPipelineState = pipelineState;
-    
+
     if (pipelineState) {
         // pipelineState->Apply();     ///< TODO有点多余
         mCurrentPrimitiveType = pipelineState->GetPrimitiveType();
-        
+
         // 使用着色器程序
         if (pipelineState->GetShaderProgram()) {
             pipelineState->GetShaderProgram()->Use();
         }
-        
+
         // 通知后端绑定管线状态
         if (mImpl && pipelineState->GetImpl()) {
             mImpl->BindPipelineState(pipelineState->GetImpl());
@@ -389,7 +387,7 @@ void LRRenderContext::SetVertexBuffer(LRVertexBuffer* buffer, uint32_t slot) {
     LR_LOG_TRACE_F("LRRenderContext::SetVertexBuffer: %p, slot=%u", buffer, slot);
     if (buffer) {
         // buffer->Bind(); //TODO 有点多余
-        
+
         // 通知后端绑定顶点缓冲区
         if (mImpl && buffer->GetImpl()) {
             mImpl->BindVertexBuffer(buffer->GetImpl(), slot);
@@ -401,7 +399,7 @@ void LRRenderContext::SetIndexBuffer(LRIndexBuffer* buffer) {
     if (buffer) {
         // buffer->Bind();
         mCurrentIndexType = buffer->GetIndexType();
-        
+
         // 通知后端绑定索引缓冲区
         if (mImpl && buffer->GetImpl()) {
             mImpl->BindIndexBuffer(buffer->GetImpl());
@@ -480,16 +478,21 @@ void LRRenderContext::DrawIndexed(uint32_t indexStart, uint32_t indexCount) {
     }
 }
 
-void LRRenderContext::DrawInstanced(uint32_t vertexStart, uint32_t vertexCount, uint32_t instanceCount) {
+void LRRenderContext::DrawInstanced(uint32_t vertexStart,
+                                    uint32_t vertexCount,
+                                    uint32_t instanceCount) {
     if (mImpl) {
         mImpl->DrawArraysInstanced(mCurrentPrimitiveType, vertexStart, vertexCount, instanceCount);
     }
 }
 
-void LRRenderContext::DrawIndexedInstanced(uint32_t indexStart, uint32_t indexCount, uint32_t instanceCount) {
+void LRRenderContext::DrawIndexedInstanced(uint32_t indexStart,
+                                           uint32_t indexCount,
+                                           uint32_t instanceCount) {
     if (mImpl) {
         size_t offset = indexStart * (mCurrentIndexType == IndexType::UInt16 ? 2 : 4);
-        mImpl->DrawElementsInstanced(mCurrentPrimitiveType, indexCount, mCurrentIndexType, offset, instanceCount);
+        mImpl->DrawElementsInstanced(mCurrentPrimitiveType, indexCount, mCurrentIndexType, offset,
+                                     instanceCount);
     }
 }
 

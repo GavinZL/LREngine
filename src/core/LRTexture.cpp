@@ -10,9 +10,7 @@
 namespace lrengine {
 namespace render {
 
-LRTexture::LRTexture()
-    : LRResource(ResourceType::Texture) {
-}
+LRTexture::LRTexture() : LRResource(ResourceType::Texture) {}
 
 LRTexture::~LRTexture() {
     if (mImpl) {
@@ -27,29 +25,29 @@ bool LRTexture::Initialize(ITextureImpl* impl, const TextureDescriptor& desc) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "Texture implementation is null");
         return false;
     }
-    
+
     mImpl = impl;
-    
+
     if (!mImpl->Create(desc)) {
         LR_SET_ERROR(ErrorCode::TextureCreationFailed, "Failed to create texture");
         delete mImpl;
         mImpl = nullptr;
         return false;
     }
-    
-    mWidth = desc.width;
-    mHeight = desc.height;
-    mDepth = desc.depth;
+
+    mWidth       = desc.width;
+    mHeight      = desc.height;
+    mDepth       = desc.depth;
     mTextureType = desc.type;
-    mFormat = desc.format;
-    mMipLevels = desc.mipLevels;
-    mSamples = desc.sampleCount;
-    mIsValid = true;
-    
+    mFormat      = desc.format;
+    mMipLevels   = desc.mipLevels;
+    mSamples     = desc.sampleCount;
+    mIsValid     = true;
+
     if (desc.debugName) {
         SetDebugName(desc.debugName);
     }
-    
+
     return true;
 }
 
@@ -58,7 +56,7 @@ void LRTexture::UpdateData(const void* data, const TextureRegion* region) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "Texture is not valid");
         return;
     }
-    
+
     mImpl->UpdateData(data, 0, region);
 }
 

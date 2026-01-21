@@ -33,7 +33,7 @@ LRDeviceFactory* LRDeviceFactory::GetFactory(Backend backend) {
             break;
         }
 #endif
-        
+
 #ifdef LRENGINE_ENABLE_OPENGLES
         case Backend::OpenGLES: {
             static DeviceFactoryGLES s_glesFactory;
@@ -44,30 +44,29 @@ LRDeviceFactory* LRDeviceFactory::GetFactory(Backend backend) {
             break;
         }
 #endif
-        
+
 #ifdef LRENGINE_ENABLE_METAL
         case Backend::Metal: {
             static DeviceFactoryMTL s_mtlFactory;
             if (s_mtlFactory.IsAvailable()) {
-
                 LR_LOG_INFO("Using Metal backend");
                 return &s_mtlFactory;
             }
             break;
         }
 #endif
-        
+
 #ifdef LRENGINE_ENABLE_VULKAN
         case Backend::Vulkan: {
             // TODO: 实现Vulkan工厂
             break;
         }
 #endif
-        
+
         default:
             break;
     }
-    
+
     LR_SET_ERROR(ErrorCode::BackendNotAvailable, "Requested backend is not available");
     return nullptr;
 }

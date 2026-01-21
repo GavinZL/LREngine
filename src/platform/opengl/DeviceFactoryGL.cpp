@@ -12,9 +12,7 @@
 namespace lrengine {
 namespace render {
 
-IRenderContextImpl* DeviceFactoryGL::CreateRenderContextImpl() {
-    return new RenderContextGL();
-}
+IRenderContextImpl* DeviceFactoryGL::CreateRenderContextImpl() { return new RenderContextGL(); }
 
 bool DeviceFactoryGL::IsAvailable() const {
     // OpenGL在大多数平台上都可用

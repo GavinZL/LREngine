@@ -11,9 +11,7 @@
 namespace lrengine {
 namespace render {
 
-LRPipelineState::LRPipelineState()
-    : LRResource(ResourceType::PipelineState) {
-}
+LRPipelineState::LRPipelineState() : LRResource(ResourceType::PipelineState) {}
 
 LRPipelineState::~LRPipelineState() {
     if (mImpl) {
@@ -23,35 +21,35 @@ LRPipelineState::~LRPipelineState() {
     }
 }
 
-bool LRPipelineState::Initialize(IPipelineStateImpl* impl, 
-                                const PipelineStateDescriptor& desc,
-                                LRShaderProgram* program) {
+bool LRPipelineState::Initialize(IPipelineStateImpl* impl,
+                                 const PipelineStateDescriptor& desc,
+                                 LRShaderProgram* program) {
     if (!impl) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "PipelineState implementation is null");
         return false;
     }
-    
-    mImpl = impl;
-    mShaderProgram = program;
-    mVertexLayout = desc.vertexLayout;
-    mBlendState = desc.blendState;
+
+    mImpl              = impl;
+    mShaderProgram     = program;
+    mVertexLayout      = desc.vertexLayout;
+    mBlendState        = desc.blendState;
     mDepthStencilState = desc.depthStencilState;
-    mRasterizerState = desc.rasterizerState;
-    mPrimitiveType = desc.primitiveType;
-    
+    mRasterizerState   = desc.rasterizerState;
+    mPrimitiveType     = desc.primitiveType;
+
     if (!mImpl->Create(desc)) {
         LR_SET_ERROR(ErrorCode::PipelineCreationFailed, "Failed to create pipeline state");
         delete mImpl;
         mImpl = nullptr;
         return false;
     }
-    
+
     mIsValid = true;
-    
+
     if (desc.debugName) {
         SetDebugName(desc.debugName);
     }
-    
+
     return true;
 }
 

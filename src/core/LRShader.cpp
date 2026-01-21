@@ -19,9 +19,7 @@ namespace render {
 // LRShader
 // =============================================================================
 
-LRShader::LRShader()
-    : LRResource(ResourceType::Shader) {
-}
+LRShader::LRShader() : LRResource(ResourceType::Shader) {}
 
 LRShader::~LRShader() {
     if (mImpl) {
@@ -36,10 +34,10 @@ bool LRShader::Initialize(IShaderImpl* impl, const ShaderDescriptor& desc) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "Shader implementation is null");
         return false;
     }
-    
-    mImpl = impl;
+
+    mImpl  = impl;
     mStage = desc.stage;
-    
+
     if (!mImpl->Compile(desc)) {
         mCompileError = mImpl->GetCompileError();
         LR_SET_ERROR(ErrorCode::ShaderCompileFailed, mCompileError.c_str());
@@ -47,23 +45,19 @@ bool LRShader::Initialize(IShaderImpl* impl, const ShaderDescriptor& desc) {
         mImpl = nullptr;
         return false;
     }
-    
+
     mIsValid = true;
-    
+
     if (desc.debugName) {
         SetDebugName(desc.debugName);
     }
-    
+
     return true;
 }
 
-bool LRShader::IsCompiled() const {
-    return mImpl && mImpl->IsCompiled();
-}
+bool LRShader::IsCompiled() const { return mImpl && mImpl->IsCompiled(); }
 
-const char* LRShader::GetCompileError() const {
-    return mCompileError.c_str();
-}
+const char* LRShader::GetCompileError() const { return mCompileError.c_str(); }
 
 ResourceHandle LRShader::GetNativeHandle() const {
     if (mImpl) {
@@ -76,9 +70,7 @@ ResourceHandle LRShader::GetNativeHandle() const {
 // LRShaderProgram
 // =============================================================================
 
-LRShaderProgram::LRShaderProgram()
-    : LRResource(ResourceType::Shader) {
-}
+LRShaderProgram::LRShaderProgram() : LRResource(ResourceType::Shader) {}
 
 LRShaderProgram::~LRShaderProgram() {
     if (mImpl) {
@@ -89,29 +81,29 @@ LRShaderProgram::~LRShaderProgram() {
 }
 
 bool LRShaderProgram::Initialize(IShaderProgramImpl* impl,
-                                LRShader* vertexShader,
-                                LRShader* fragmentShader,
-                                LRShader* geometryShader) {
+                                 LRShader* vertexShader,
+                                 LRShader* fragmentShader,
+                                 LRShader* geometryShader) {
     if (!impl) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "Shader program implementation is null");
         return false;
     }
-    
+
     if (!vertexShader || !vertexShader->IsCompiled()) {
         LR_SET_ERROR(ErrorCode::ShaderNotCompiled, "Vertex shader is not compiled");
         return false;
     }
-    
+
     if (!fragmentShader || !fragmentShader->IsCompiled()) {
         LR_SET_ERROR(ErrorCode::ShaderNotCompiled, "Fragment shader is not compiled");
         return false;
     }
-    
-    mImpl = impl;
-    mVertexShader = vertexShader;
+
+    mImpl           = impl;
+    mVertexShader   = vertexShader;
     mFragmentShader = fragmentShader;
     mGeometryShader = geometryShader;
-    
+
     // 收集着色器实现
     std::vector<IShaderImpl*> shaderImpls;
     shaderImpls.push_back(vertexShader->GetImpl());
@@ -119,7 +111,7 @@ bool LRShaderProgram::Initialize(IShaderProgramImpl* impl,
     if (geometryShader && geometryShader->IsCompiled()) {
         shaderImpls.push_back(geometryShader->GetImpl());
     }
-    
+
     if (!mImpl->Link(shaderImpls.data(), static_cast<uint32_t>(shaderImpls.size()))) {
         mLinkError = mImpl->GetLinkError();
         LR_SET_ERROR(ErrorCode::ShaderLinkFailed, mLinkError.c_str());
@@ -127,18 +119,14 @@ bool LRShaderProgram::Initialize(IShaderProgramImpl* impl,
         mImpl = nullptr;
         return false;
     }
-    
+
     mIsValid = true;
     return true;
 }
 
-bool LRShaderProgram::IsLinked() const {
-    return mImpl && mImpl->IsLinked();
-}
+bool LRShaderProgram::IsLinked() const { return mImpl && mImpl->IsLinked(); }
 
-const char* LRShaderProgram::GetLinkError() const {
-    return mLinkError.c_str();
-}
+const char* LRShaderProgram::GetLinkError() const { return mLinkError.c_str(); }
 
 void LRShaderProgram::Use() {
     if (mImpl && mIsValid) {
@@ -150,15 +138,15 @@ int32_t LRShaderProgram::GetUniformLocation(const char* name) {
     if (!mImpl || !mIsValid) {
         return -1;
     }
-    
+
     // 检查缓存
     auto it = mUniformLocationCache.find(name);
     if (it != mUniformLocationCache.end()) {
         return it->second;
     }
-    
+
     // 查询并缓存
-    int32_t location = mImpl->GetUniformLocation(name);
+    int32_t location            = mImpl->GetUniformLocation(name);
     mUniformLocationCache[name] = location;
     return location;
 }
@@ -224,11 +212,15 @@ void LRShaderProgram::SetUniformMatrix4(const char* name, const float* value, bo
     }
 }
 
-void LRShaderProgram::SetUniformMatrix3(const char* name, const lrengine::math::Mat3f& value, bool transpose) {
+void LRShaderProgram::SetUniformMatrix3(const char* name,
+                                        const lrengine::math::Mat3f& value,
+                                        bool transpose) {
     SetUniformMatrix3(name, value.m, transpose);
 }
 
-void LRShaderProgram::SetUniformMatrix4(const char* name, const lrengine::math::Mat4f& value, bool transpose) {
+void LRShaderProgram::SetUniformMatrix4(const char* name,
+                                        const lrengine::math::Mat4f& value,
+                                        bool transpose) {
     SetUniformMatrix4(name, value.m, transpose);
 }
 

@@ -27,20 +27,20 @@ class PipelineStateMTL;
 struct RenderState {
     // 当前渲染通道
     RenderPassMTL* renderPass = nullptr;
-    
+
     // Metal对象
     id<MTLRenderCommandEncoder> encoder = nil;
-    id<MTLCommandBuffer> commandBuffer = nil;
-    
+    id<MTLCommandBuffer> commandBuffer  = nil;
+
     // 视口和裁剪
     MTLViewport viewport;
     MTLScissorRect scissor;
-    
+
     // 管线状态
     PipelineStateMTL* pipelineState = nullptr;
-    
+
     // 深度
-    uint32_t depth = 0;  // 栈深度，用于调试
+    uint32_t depth = 0; // 栈深度，用于调试
 };
 
 /**
@@ -55,39 +55,39 @@ class RenderStateStackMTL {
 public:
     RenderStateStackMTL();
     ~RenderStateStackMTL();
-    
+
     /**
      * @brief 压入新状态
      */
     void PushState(const RenderState& state);
-    
+
     /**
      * @brief 弹出当前状态
      * @return 弹出的状态
      */
     RenderState PopState();
-    
+
     /**
      * @brief 获取当前状态（栈顶）
      */
     RenderState& GetCurrentState();
     const RenderState& GetCurrentState() const;
-    
+
     /**
      * @brief 检查栈是否为空
      */
     bool IsEmpty() const { return m_stateStack.empty(); }
-    
+
     /**
      * @brief 获取当前栈深度
      */
     uint32_t GetDepth() const { return static_cast<uint32_t>(m_stateStack.size()); }
-    
+
     /**
      * @brief 清空栈
      */
     void Clear();
-    
+
 private:
     std::vector<RenderState> m_stateStack;
 };

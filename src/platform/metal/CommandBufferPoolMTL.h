@@ -32,7 +32,7 @@ class CommandBufferPoolMTL {
 public:
     explicit CommandBufferPoolMTL(id<MTLCommandQueue> queue, uint32_t maxBuffers = 3);
     ~CommandBufferPoolMTL();
-    
+
     /**
      * @brief 获取一个CommandBuffer
      * 
@@ -40,32 +40,32 @@ public:
      * 注意：返回的是新创建的CommandBuffer，不是复用的
      */
     id<MTLCommandBuffer> AcquireCommandBuffer();
-    
+
     /**
      * @brief 提交CommandBuffer
      * 
      * 会自动注册completion handler，完成后从in-flight队列移除
      */
     void SubmitCommandBuffer(id<MTLCommandBuffer> cmdBuffer);
-    
+
     /**
      * @brief 等待所有CommandBuffer完成
      */
     void WaitIdle();
-    
+
     /**
      * @brief 获取正在使用的CommandBuffer数量
      */
     uint32_t GetInFlightCount() const;
-    
+
 private:
     id<MTLCommandQueue> m_queue;
     uint32_t m_maxBuffers;
-    
+
     // 线程同步
     mutable std::mutex m_mutex;
     std::condition_variable m_condition;
-    
+
     // 正在使用的缓冲区（CommandBuffer是一次性的，完成后销毁，不回收）
     std::vector<id<MTLCommandBuffer>> m_inFlightBuffers;
 };

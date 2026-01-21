@@ -24,7 +24,7 @@ bool DeviceFactoryGLES::IsAvailable() const {
 #if defined(__ANDROID__) || (defined(__APPLE__) && (TARGET_OS_IPHONE || TARGET_OS_SIMULATOR))
     return true;
 #elif defined(__EMSCRIPTEN__)
-    return true;  // WebGL
+    return true; // WebGL
 #else
     // 在其他平台上可能通过EGL支持
     return false;

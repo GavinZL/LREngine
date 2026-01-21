@@ -35,7 +35,10 @@ public:
     bool IsComplete() const override;
     void Bind() override;
     void Unbind() override;
-    void Clear(uint32_t clearFlags, const float* clearColor, float clearDepth, uint8_t clearStencil) override;
+    void Clear(uint32_t clearFlags,
+               const float* clearColor,
+               float clearDepth,
+               uint8_t clearStencil) override;
     ResourceHandle GetNativeHandle() const override;
     uint32_t GetWidth() const override;
     uint32_t GetHeight() const override;
@@ -71,7 +74,10 @@ public:
     bool IsComplete() const override;
     void Bind() override;
     void Unbind() override;
-    void Clear(uint32_t clearFlags, const float* clearColor, float clearDepth, uint8_t clearStencil) override;
+    void Clear(uint32_t clearFlags,
+               const float* clearColor,
+               float clearDepth,
+               uint8_t clearStencil) override;
     ResourceHandle GetNativeHandle() const override;
     uint32_t GetWidth() const override;
     uint32_t GetHeight() const override;

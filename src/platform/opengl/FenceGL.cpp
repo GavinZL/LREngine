@@ -16,19 +16,11 @@ namespace gl {
 // FenceGL
 // ============================================================================
 
-FenceGL::FenceGL()
-    : m_sync(nullptr)
-    , m_signaled(false)
-{
-}
+FenceGL::FenceGL() : m_sync(nullptr), m_signaled(false) {}
 
-FenceGL::~FenceGL()
-{
-    Destroy();
-}
+FenceGL::~FenceGL() { Destroy(); }
 
-bool FenceGL::Create()
-{
+bool FenceGL::Create() {
     if (m_sync != nullptr) {
         Destroy();
     }
@@ -36,8 +28,7 @@ bool FenceGL::Create()
     return true;
 }
 
-void FenceGL::Destroy()
-{
+void FenceGL::Destroy() {
     if (m_sync != nullptr) {
         glDeleteSync(m_sync);
         m_sync = nullptr;
@@ -45,12 +36,11 @@ void FenceGL::Destroy()
     m_signaled = false;
 }
 
-void FenceGL::Signal()
-{
+void FenceGL::Signal() {
     if (m_sync != nullptr) {
         glDeleteSync(m_sync);
     }
-    
+
     m_sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     if (m_sync == nullptr) {
         LR_SET_ERROR(ErrorCode::FenceError, "Failed to create fence sync");
@@ -58,8 +48,7 @@ void FenceGL::Signal()
     m_signaled = false;
 }
 
-bool FenceGL::Wait(uint64_t timeoutNs)
-{
+bool FenceGL::Wait(uint64_t timeoutNs) {
     if (m_sync == nullptr) {
         return true; // 没有同步对象，立即返回
     }
@@ -69,7 +58,7 @@ bool FenceGL::Wait(uint64_t timeoutNs)
     }
 
     GLenum result = glClientWaitSync(m_sync, GL_SYNC_FLUSH_COMMANDS_BIT, timeoutNs);
-    
+
     switch (result) {
         case GL_ALREADY_SIGNALED:
         case GL_CONDITION_SATISFIED:
@@ -84,8 +73,7 @@ bool FenceGL::Wait(uint64_t timeoutNs)
     }
 }
 
-FenceStatus FenceGL::GetStatus() const
-{
+FenceStatus FenceGL::GetStatus() const {
     if (m_sync == nullptr) {
         return FenceStatus::Unsignaled;
     }
@@ -104,8 +92,7 @@ FenceStatus FenceGL::GetStatus() const
     return FenceStatus::Unsignaled;
 }
 
-void FenceGL::Reset()
-{
+void FenceGL::Reset() {
     if (m_sync != nullptr) {
         glDeleteSync(m_sync);
         m_sync = nullptr;
@@ -113,8 +100,7 @@ void FenceGL::Reset()
     m_signaled = false;
 }
 
-ResourceHandle FenceGL::GetNativeHandle() const
-{
+ResourceHandle FenceGL::GetNativeHandle() const {
     ResourceHandle handle;
     handle.ptr = m_sync;
     return handle;
@@ -124,20 +110,11 @@ ResourceHandle FenceGL::GetNativeHandle() const
 // QueryGL
 // ============================================================================
 
-QueryGL::QueryGL()
-    : m_queryID(0)
-    , m_target(GL_SAMPLES_PASSED)
-    , m_active(false)
-{
-}
+QueryGL::QueryGL() : m_queryID(0), m_target(GL_SAMPLES_PASSED), m_active(false) {}
 
-QueryGL::~QueryGL()
-{
-    Destroy();
-}
+QueryGL::~QueryGL() { Destroy(); }
 
-bool QueryGL::Create(Type type)
-{
+bool QueryGL::Create(Type type) {
     if (m_queryID != 0) {
         Destroy();
     }
@@ -166,8 +143,7 @@ bool QueryGL::Create(Type type)
     return m_queryID != 0;
 }
 
-void QueryGL::Destroy()
-{
+void QueryGL::Destroy() {
     if (m_queryID != 0) {
         if (m_active) {
             End();
@@ -177,24 +153,21 @@ void QueryGL::Destroy()
     }
 }
 
-void QueryGL::Begin()
-{
+void QueryGL::Begin() {
     if (m_queryID != 0 && !m_active) {
         glBeginQuery(m_target, m_queryID);
         m_active = true;
     }
 }
 
-void QueryGL::End()
-{
+void QueryGL::End() {
     if (m_queryID != 0 && m_active) {
         glEndQuery(m_target);
         m_active = false;
     }
 }
 
-bool QueryGL::IsResultAvailable() const
-{
+bool QueryGL::IsResultAvailable() const {
     if (m_queryID == 0 || m_active) {
         return false;
     }
@@ -204,8 +177,7 @@ bool QueryGL::IsResultAvailable() const
     return available == GL_TRUE;
 }
 
-uint64_t QueryGL::GetResult() const
-{
+uint64_t QueryGL::GetResult() const {
     if (m_queryID == 0) {
         return 0;
     }

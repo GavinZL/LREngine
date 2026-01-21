@@ -26,7 +26,9 @@ public:
     // ITextureImpl接口
     bool Create(const TextureDescriptor& desc) override;
     void Destroy() override;
-    void UpdateData(const void* data, uint32_t mipLevel = 0, const TextureRegion* region = nullptr) override;
+    void UpdateData(const void* data,
+                    uint32_t mipLevel           = 0,
+                    const TextureRegion* region = nullptr) override;
     void GenerateMipmaps() override;
     void Bind(uint32_t slot) override;
     void Unbind(uint32_t slot) override;
@@ -48,7 +50,7 @@ private:
     id<MTLDevice> m_device;
     id<MTLTexture> m_texture;
     id<MTLSamplerState> m_sampler;
-    
+
     uint32_t m_width;
     uint32_t m_height;
     uint32_t m_depth;

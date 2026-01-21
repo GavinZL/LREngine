@@ -12,9 +12,7 @@
 namespace lrengine {
 namespace render {
 
-LRFrameBuffer::LRFrameBuffer()
-    : LRResource(ResourceType::FrameBuffer) {
-}
+LRFrameBuffer::LRFrameBuffer() : LRResource(ResourceType::FrameBuffer) {}
 
 LRFrameBuffer::~LRFrameBuffer() {
     if (mImpl) {
@@ -29,24 +27,24 @@ bool LRFrameBuffer::Initialize(IFrameBufferImpl* impl, const FrameBufferDescript
         LR_SET_ERROR(ErrorCode::InvalidArgument, "FrameBuffer implementation is null");
         return false;
     }
-    
+
     mImpl = impl;
-    
+
     if (!mImpl->Create(desc)) {
         LR_SET_ERROR(ErrorCode::ResourceCreationFailed, "Failed to create framebuffer");
         delete mImpl;
         mImpl = nullptr;
         return false;
     }
-    
-    mWidth = desc.width;
-    mHeight = desc.height;
+
+    mWidth   = desc.width;
+    mHeight  = desc.height;
     mIsValid = true;
-    
+
     if (desc.debugName) {
         SetDebugName(desc.debugName);
     }
-    
+
     return true;
 }
 
@@ -55,19 +53,19 @@ void LRFrameBuffer::AttachColorTexture(LRTexture* texture, uint32_t index) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "FrameBuffer is not valid");
         return;
     }
-    
+
     if (index >= 8) {
         LR_SET_ERROR(ErrorCode::InvalidArgument, "Color attachment index out of range");
         return;
     }
-    
+
     // 确保vector足够大
     if (mColorTextures.size() <= index) {
         mColorTextures.resize(index + 1, nullptr);
     }
-    
+
     mColorTextures[index] = texture;
-    
+
     // 将纹理附加到平台实现
     mImpl->AttachColorTexture(texture ? texture->GetImpl() : nullptr, index);
 }
@@ -77,9 +75,9 @@ void LRFrameBuffer::AttachDepthTexture(LRTexture* texture) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "FrameBuffer is not valid");
         return;
     }
-    
+
     mDepthTexture = texture;
-    
+
     // 将深度纹理附加到平台实现
     mImpl->AttachDepthTexture(texture ? texture->GetImpl() : nullptr);
 }
@@ -89,7 +87,7 @@ void LRFrameBuffer::AttachStencilTexture(LRTexture* texture) {
         LR_SET_ERROR(ErrorCode::ResourceInvalid, "FrameBuffer is not valid");
         return;
     }
-    
+
     mStencilTexture = texture;
 }
 

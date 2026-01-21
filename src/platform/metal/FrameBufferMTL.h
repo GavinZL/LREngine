@@ -58,25 +58,25 @@ private:
 
     id<MTLDevice> m_device;
     MTLRenderPassDescriptor* m_renderPassDescriptor;
-    
+
     std::vector<id<MTLTexture>> m_colorTextures;
     std::vector<uint32_t> m_colorMipLevels;
     id<MTLTexture> m_depthTexture;
     id<MTLTexture> m_stencilTexture;
     uint32_t m_depthMipLevel;
     uint32_t m_stencilMipLevel;
-    
+
     uint32_t m_width;
     uint32_t m_height;
     uint32_t m_samples;
-    
+
     // 清除值
     float m_clearColor[4];
     float m_clearDepth;
     uint8_t m_clearStencil;
-    
+
     FrameBufferDescriptor m_descriptor;
-    
+
     // 删除context指针，解除循环依赖
     // RenderContextMTL* m_context;
 };

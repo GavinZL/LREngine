@@ -23,37 +23,35 @@ namespace render {
 
 RenderContextGL::RenderContextGL() = default;
 
-RenderContextGL::~RenderContextGL() {
-    Shutdown();
-}
+RenderContextGL::~RenderContextGL() { Shutdown(); }
 
 bool RenderContextGL::Initialize(const RenderContextDescriptor& desc) {
     mWindowHandle = desc.windowHandle;
-    mWidth = desc.width;
-    mHeight = desc.height;
-    mDebug = desc.debug;
-    
+    mWidth        = desc.width;
+    mHeight       = desc.height;
+    mDebug        = desc.debug;
+
     // 注意：实际的OpenGL上下文创建需要平台特定代码（GLFW等）
     // 这里假设OpenGL上下文已经由外部创建并设置为当前
-    
+
     // 创建默认VAO（OpenGL Core Profile需要）
     // 注意：不立即绑定，由VertexBuffer自己管理VAO
     glGenVertexArrays(1, &mDefaultVAO);
     // 不要在这里绑定mDefaultVAO，避免状态污染
     // glBindVertexArray(mDefaultVAO);  // ✖️ 移除这行
-    
+
     // 设置默认状态
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    
+
     // 设置默认视口
     glViewport(0, 0, mWidth, mHeight);
-    
+
     if (mDebug) {
         // 启用调试输出（如果支持）
         // glEnable(GL_DEBUG_OUTPUT);
     }
-    
+
     return true;
 }
 
@@ -85,29 +83,17 @@ IBufferImpl* RenderContextGL::CreateBufferImpl(BufferType type) {
     }
 }
 
-IShaderImpl* RenderContextGL::CreateShaderImpl() {
-    return new gl::ShaderGL();
-}
+IShaderImpl* RenderContextGL::CreateShaderImpl() { return new gl::ShaderGL(); }
 
-IShaderProgramImpl* RenderContextGL::CreateShaderProgramImpl() {
-    return new gl::ShaderProgramGL();
-}
+IShaderProgramImpl* RenderContextGL::CreateShaderProgramImpl() { return new gl::ShaderProgramGL(); }
 
-ITextureImpl* RenderContextGL::CreateTextureImpl() {
-    return new gl::TextureGL();
-}
+ITextureImpl* RenderContextGL::CreateTextureImpl() { return new gl::TextureGL(); }
 
-IFrameBufferImpl* RenderContextGL::CreateFrameBufferImpl() {
-    return new gl::FrameBufferGL();
-}
+IFrameBufferImpl* RenderContextGL::CreateFrameBufferImpl() { return new gl::FrameBufferGL(); }
 
-IPipelineStateImpl* RenderContextGL::CreatePipelineStateImpl() {
-    return new gl::PipelineStateGL();
-}
+IPipelineStateImpl* RenderContextGL::CreatePipelineStateImpl() { return new gl::PipelineStateGL(); }
 
-IFenceImpl* RenderContextGL::CreateFenceImpl() {
-    return new gl::FenceGL();
-}
+IFenceImpl* RenderContextGL::CreateFenceImpl() { return new gl::FenceGL(); }
 
 void RenderContextGL::SetViewport(int32_t x, int32_t y, int32_t width, int32_t height) {
     glViewport(x, y, width, height);
@@ -119,26 +105,26 @@ void RenderContextGL::SetScissor(int32_t x, int32_t y, int32_t width, int32_t he
 
 void RenderContextGL::Clear(uint8_t flags, const float* color, float depth, uint8_t stencil) {
     GLbitfield clearMask = 0;
-    
+
     LR_LOG_TRACE_F("OpenGL Clear: flags=0x%x, depth=%.2f, stencil=%u", flags, depth, stencil);
-    
+
     if (flags & ClearColor) {
         if (color) {
             glClearColor(color[0], color[1], color[2], color[3]);
         }
         clearMask |= GL_COLOR_BUFFER_BIT;
     }
-    
+
     if (flags & ClearDepth) {
         glClearDepth(depth);
         clearMask |= GL_DEPTH_BUFFER_BIT;
     }
-    
+
     if (flags & ClearStencil) {
         glClearStencil(stencil);
         clearMask |= GL_STENCIL_BUFFER_BIT;
     }
-    
+
     if (clearMask) {
         glClear(clearMask);
     }
@@ -181,17 +167,18 @@ void RenderContextGL::BindTexture(ITextureImpl* texture, uint32_t slot) {
 
 void RenderContextGL::BeginRenderPass(IFrameBufferImpl* frameBuffer) {
     LR_LOG_TRACE_F("OpenGL BeginRenderPass: FBO=%p", frameBuffer);
-    
+
     // ❗重要：在绑定 FBO 之后，必须确保深度写入启用
     // 因为之前的 Pass 可能设置了 glDepthMask(GL_FALSE)
     // 这会导致 glClear(GL_DEPTH_BUFFER_BIT) 无法清除深度缓冲
     glDepthMask(GL_TRUE);
     LR_LOG_TRACE("  Depth Write: Forced to ENABLED for Clear operation");
-    
+
     if (frameBuffer) {
         // 绑定离屏FBO，并设置视口
         frameBuffer->Bind();
-        LR_LOG_TRACE_F("  Viewport: %ux%u (offscreen FBO)", frameBuffer->GetWidth(), frameBuffer->GetHeight());
+        LR_LOG_TRACE_F("  Viewport: %ux%u (offscreen FBO)", frameBuffer->GetWidth(),
+                       frameBuffer->GetHeight());
     } else {
         // 绑定默认framebuffer（屏幕）
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -209,42 +196,48 @@ void RenderContextGL::EndRenderPass() {
     LR_LOG_TRACE("  glFlush() called to ensure command submission");
 }
 
-void RenderContextGL::DrawArrays(PrimitiveType primitiveType, uint32_t vertexStart, uint32_t vertexCount) {
-    LR_LOG_TRACE_F("OpenGL DrawArrays: type=%d, start=%u, count=%u", (int)primitiveType, vertexStart, vertexCount);
+void RenderContextGL::DrawArrays(PrimitiveType primitiveType,
+                                 uint32_t vertexStart,
+                                 uint32_t vertexCount) {
+    LR_LOG_TRACE_F("OpenGL DrawArrays: type=%d, start=%u, count=%u", (int)primitiveType,
+                   vertexStart, vertexCount);
     GLenum mode = gl::ToGLPrimitiveType(primitiveType);
     glDrawArrays(mode, vertexStart, vertexCount);
 }
 
-void RenderContextGL::DrawElements(PrimitiveType primitiveType, uint32_t indexCount,
-                                  IndexType indexType, size_t indexOffset) {
-    LR_LOG_TRACE_F("OpenGL DrawElements: type=%d, count=%u, indexType=%d, offset=%zu", (int)primitiveType, indexCount, (int)indexType, indexOffset);
+void RenderContextGL::DrawElements(PrimitiveType primitiveType,
+                                   uint32_t indexCount,
+                                   IndexType indexType,
+                                   size_t indexOffset) {
+    LR_LOG_TRACE_F("OpenGL DrawElements: type=%d, count=%u, indexType=%d, offset=%zu",
+                   (int)primitiveType, indexCount, (int)indexType, indexOffset);
     GLenum mode = gl::ToGLPrimitiveType(primitiveType);
     GLenum type = gl::ToGLIndexType(indexType);
     glDrawElements(mode, indexCount, type, reinterpret_cast<const void*>(indexOffset));
 }
 
-void RenderContextGL::DrawArraysInstanced(PrimitiveType primitiveType, uint32_t vertexStart,
-                                         uint32_t vertexCount, uint32_t instanceCount) {
+void RenderContextGL::DrawArraysInstanced(PrimitiveType primitiveType,
+                                          uint32_t vertexStart,
+                                          uint32_t vertexCount,
+                                          uint32_t instanceCount) {
     GLenum mode = gl::ToGLPrimitiveType(primitiveType);
     glDrawArraysInstanced(mode, vertexStart, vertexCount, instanceCount);
 }
 
-void RenderContextGL::DrawElementsInstanced(PrimitiveType primitiveType, uint32_t indexCount,
-                                           IndexType indexType, size_t indexOffset,
-                                           uint32_t instanceCount) {
+void RenderContextGL::DrawElementsInstanced(PrimitiveType primitiveType,
+                                            uint32_t indexCount,
+                                            IndexType indexType,
+                                            size_t indexOffset,
+                                            uint32_t instanceCount) {
     GLenum mode = gl::ToGLPrimitiveType(primitiveType);
     GLenum type = gl::ToGLIndexType(indexType);
-    glDrawElementsInstanced(mode, indexCount, type, 
-                           reinterpret_cast<const void*>(indexOffset), instanceCount);
+    glDrawElementsInstanced(mode, indexCount, type, reinterpret_cast<const void*>(indexOffset),
+                            instanceCount);
 }
 
-void RenderContextGL::WaitIdle() {
-    glFinish();
-}
+void RenderContextGL::WaitIdle() { glFinish(); }
 
-void RenderContextGL::Flush() {
-    glFlush();
-}
+void RenderContextGL::Flush() { glFlush(); }
 
 } // namespace render
 } // namespace lrengine

@@ -69,7 +69,7 @@ public:
     void Destroy();
     void Bind(uint32_t slot);
     void Unbind(uint32_t slot);
-    
+
     GLuint GetSamplerID() const { return m_samplerID; }
 
 private:

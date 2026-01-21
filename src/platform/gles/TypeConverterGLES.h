@@ -14,40 +14,41 @@
 
 // 平台相关的OpenGL ES头文件
 #if defined(__ANDROID__)
-    #include <GLES3/gl3.h>
-    #include <GLES3/gl3ext.h>
-    #include <GLES3/gl31.h>
-    #include <GLES3/gl32.h>
-    #define LRENGINE_GLES_AVAILABLE 1
+#include <GLES3/gl3.h>
+#include <GLES3/gl3ext.h>
+#include <GLES3/gl31.h>
+#include <GLES3/gl32.h>
+#define LRENGINE_GLES_AVAILABLE 1
 #elif defined(__APPLE__)
-    #include <TargetConditionals.h>
-    #if TARGET_OS_IPHONE || TARGET_OS_SIMULATOR
-        #include <OpenGLES/ES3/gl.h>
-        #include <OpenGLES/ES3/glext.h>
-        #define LRENGINE_GLES_AVAILABLE 1
-    #else
-        // macOS不支持OpenGL ES，使用标准OpenGL头文件提供类型定义
-        #include <OpenGL/gl3.h>
-        #define LRENGINE_GLES_AVAILABLE 0
-    #endif
-#elif defined(__EMSCRIPTEN__)
-    #include <GLES3/gl3.h>
-    #include <GLES3/gl2ext.h>
-    #define LRENGINE_GLES_AVAILABLE 1
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE || TARGET_OS_SIMULATOR
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+#define LRENGINE_GLES_AVAILABLE 1
 #else
-    // 其他平台尝试使用标准GL头文件
-    #include <GL/gl.h>
-    #define LRENGINE_GLES_AVAILABLE 0
+// macOS不支持OpenGL ES，使用标准OpenGL头文件提供类型定义
+#include <OpenGL/gl3.h>
+#define LRENGINE_GLES_AVAILABLE 0
+#endif
+#elif defined(__EMSCRIPTEN__)
+#include <GLES3/gl3.h>
+#include <GLES3/gl2ext.h>
+#define LRENGINE_GLES_AVAILABLE 1
+#else
+// 其他平台尝试使用标准GL头文件
+#include <GL/gl.h>
+#define LRENGINE_GLES_AVAILABLE 0
 #endif
 
 #if !LRENGINE_GLES_AVAILABLE
-    #warning "OpenGL ES is not available on this platform. GLES backend will use OpenGL types for compilation but may not work at runtime."
+#warning                                                                                           \
+    "OpenGL ES is not available on this platform. GLES backend will use OpenGL types for compilation but may not work at runtime."
 #endif
 
 // OpenGL ES 兼容性定义
 // GL_STENCIL_INDEX 在 OpenGL ES 中不存在，但在某些场景需要用到
 #ifndef GL_STENCIL_INDEX
-    #define GL_STENCIL_INDEX 0x1901
+#define GL_STENCIL_INDEX 0x1901
 #endif
 
 // 前向声明
@@ -56,8 +57,8 @@ namespace render {
 namespace gles {
 class GLESCapabilities;
 }
-}
-}
+} // namespace render
+} // namespace lrengine
 
 namespace lrengine {
 namespace render {
@@ -68,10 +69,14 @@ namespace gles {
  */
 inline GLenum ToGLESBufferUsage(BufferUsage usage) {
     switch (usage) {
-        case BufferUsage::Static:  return GL_STATIC_DRAW;
-        case BufferUsage::Dynamic: return GL_DYNAMIC_DRAW;
-        case BufferUsage::Stream:  return GL_STREAM_DRAW;
-        default: return GL_STATIC_DRAW;
+        case BufferUsage::Static:
+            return GL_STATIC_DRAW;
+        case BufferUsage::Dynamic:
+            return GL_DYNAMIC_DRAW;
+        case BufferUsage::Stream:
+            return GL_STREAM_DRAW;
+        default:
+            return GL_STATIC_DRAW;
     }
 }
 
@@ -80,13 +85,18 @@ inline GLenum ToGLESBufferUsage(BufferUsage usage) {
  */
 inline GLenum ToGLESBufferTarget(BufferType type) {
     switch (type) {
-        case BufferType::Vertex:  return GL_ARRAY_BUFFER;
-        case BufferType::Index:   return GL_ELEMENT_ARRAY_BUFFER;
-        case BufferType::Uniform: return GL_UNIFORM_BUFFER;
+        case BufferType::Vertex:
+            return GL_ARRAY_BUFFER;
+        case BufferType::Index:
+            return GL_ELEMENT_ARRAY_BUFFER;
+        case BufferType::Uniform:
+            return GL_UNIFORM_BUFFER;
 #ifdef GL_SHADER_STORAGE_BUFFER
-        case BufferType::Storage: return GL_SHADER_STORAGE_BUFFER; // ES 3.1+
+        case BufferType::Storage:
+            return GL_SHADER_STORAGE_BUFFER; // ES 3.1+
 #endif
-        default: return GL_ARRAY_BUFFER;
+        default:
+            return GL_ARRAY_BUFFER;
     }
 }
 
@@ -96,13 +106,17 @@ inline GLenum ToGLESBufferTarget(BufferType type) {
  */
 inline GLenum ToGLESShaderStage(ShaderStage stage) {
     switch (stage) {
-        case ShaderStage::Vertex:   return GL_VERTEX_SHADER;
-        case ShaderStage::Fragment: return GL_FRAGMENT_SHADER;
+        case ShaderStage::Vertex:
+            return GL_VERTEX_SHADER;
+        case ShaderStage::Fragment:
+            return GL_FRAGMENT_SHADER;
 #ifdef GL_COMPUTE_SHADER
-        case ShaderStage::Compute:  return GL_COMPUTE_SHADER; // ES 3.1+
+        case ShaderStage::Compute:
+            return GL_COMPUTE_SHADER; // ES 3.1+
 #endif
         // ES不支持Geometry和Tessellation着色器
-        default: return GL_VERTEX_SHADER;
+        default:
+            return GL_VERTEX_SHADER;
     }
 }
 
@@ -111,14 +125,20 @@ inline GLenum ToGLESShaderStage(ShaderStage stage) {
  */
 inline GLenum ToGLESTextureTarget(TextureType type) {
     switch (type) {
-        case TextureType::Texture2D:      return GL_TEXTURE_2D;
-        case TextureType::Texture3D:      return GL_TEXTURE_3D;
-        case TextureType::TextureCube:    return GL_TEXTURE_CUBE_MAP;
-        case TextureType::Texture2DArray: return GL_TEXTURE_2D_ARRAY;
+        case TextureType::Texture2D:
+            return GL_TEXTURE_2D;
+        case TextureType::Texture3D:
+            return GL_TEXTURE_3D;
+        case TextureType::TextureCube:
+            return GL_TEXTURE_CUBE_MAP;
+        case TextureType::Texture2DArray:
+            return GL_TEXTURE_2D_ARRAY;
 #ifdef GL_TEXTURE_2D_MULTISAMPLE
-        case TextureType::Texture2DMultisample: return GL_TEXTURE_2D_MULTISAMPLE; // ES 3.1+
+        case TextureType::Texture2DMultisample:
+            return GL_TEXTURE_2D_MULTISAMPLE; // ES 3.1+
 #endif
-        default: return GL_TEXTURE_2D;
+        default:
+            return GL_TEXTURE_2D;
     }
 }
 
@@ -129,39 +149,64 @@ inline GLenum ToGLESTextureTarget(TextureType type) {
 inline GLenum ToGLESInternalFormat(PixelFormat format) {
     switch (format) {
         // 基本颜色格式
-        case PixelFormat::R8:               return GL_R8;
-        case PixelFormat::RG8:              return GL_RG8;
-        case PixelFormat::RGB8:             return GL_RGB8;
-        case PixelFormat::RGBA8:            return GL_RGBA8;
+        case PixelFormat::R8:
+            return GL_R8;
+        case PixelFormat::RG8:
+            return GL_RG8;
+        case PixelFormat::RGB8:
+            return GL_RGB8;
+        case PixelFormat::RGBA8:
+            return GL_RGBA8;
         // 浮点格式
-        case PixelFormat::R16F:             return GL_R16F;
-        case PixelFormat::RG16F:            return GL_RG16F;
-        case PixelFormat::RGB16F:           return GL_RGB16F;
-        case PixelFormat::RGBA16F:          return GL_RGBA16F;
-        case PixelFormat::R32F:             return GL_R32F;
-        case PixelFormat::RG32F:            return GL_RG32F;
-        case PixelFormat::RGB32F:           return GL_RGB32F;
-        case PixelFormat::RGBA32F:          return GL_RGBA32F;
-        case PixelFormat::RGB10A2:          return GL_RGB10_A2;
+        case PixelFormat::R16F:
+            return GL_R16F;
+        case PixelFormat::RG16F:
+            return GL_RG16F;
+        case PixelFormat::RGB16F:
+            return GL_RGB16F;
+        case PixelFormat::RGBA16F:
+            return GL_RGBA16F;
+        case PixelFormat::R32F:
+            return GL_R32F;
+        case PixelFormat::RG32F:
+            return GL_RG32F;
+        case PixelFormat::RGB32F:
+            return GL_RGB32F;
+        case PixelFormat::RGBA32F:
+            return GL_RGBA32F;
+        case PixelFormat::RGB10A2:
+            return GL_RGB10_A2;
         // 深度/模板格式
-        case PixelFormat::Depth16:          return GL_DEPTH_COMPONENT16;
-        case PixelFormat::Depth24:          return GL_DEPTH_COMPONENT24;
-        case PixelFormat::Depth32F:         return GL_DEPTH_COMPONENT32F;
-        case PixelFormat::Depth24Stencil8:  return GL_DEPTH24_STENCIL8;
-        case PixelFormat::Depth32FStencil8: return GL_DEPTH32F_STENCIL8;
-        case PixelFormat::Stencil8:         return GL_STENCIL_INDEX8;
-        // 压缩格式 - ETC2 (ES 3.0原生支持)
+        case PixelFormat::Depth16:
+            return GL_DEPTH_COMPONENT16;
+        case PixelFormat::Depth24:
+            return GL_DEPTH_COMPONENT24;
+        case PixelFormat::Depth32F:
+            return GL_DEPTH_COMPONENT32F;
+        case PixelFormat::Depth24Stencil8:
+            return GL_DEPTH24_STENCIL8;
+        case PixelFormat::Depth32FStencil8:
+            return GL_DEPTH32F_STENCIL8;
+        case PixelFormat::Stencil8:
+            return GL_STENCIL_INDEX8;
+            // 压缩格式 - ETC2 (ES 3.0原生支持)
 #ifdef GL_COMPRESSED_RGB8_ETC2
-        case PixelFormat::ETC2_RGB8:        return GL_COMPRESSED_RGB8_ETC2;
-        case PixelFormat::ETC2_RGBA8:       return GL_COMPRESSED_RGBA8_ETC2_EAC;
+        case PixelFormat::ETC2_RGB8:
+            return GL_COMPRESSED_RGB8_ETC2;
+        case PixelFormat::ETC2_RGBA8:
+            return GL_COMPRESSED_RGBA8_ETC2_EAC;
 #endif
-        // ASTC格式 (需要扩展支持)
+            // ASTC格式 (需要扩展支持)
 #ifdef GL_COMPRESSED_RGBA_ASTC_4x4_KHR
-        case PixelFormat::ASTC_4x4:         return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
-        case PixelFormat::ASTC_6x6:         return GL_COMPRESSED_RGBA_ASTC_6x6_KHR;
-        case PixelFormat::ASTC_8x8:         return GL_COMPRESSED_RGBA_ASTC_8x8_KHR;
+        case PixelFormat::ASTC_4x4:
+            return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
+        case PixelFormat::ASTC_6x6:
+            return GL_COMPRESSED_RGBA_ASTC_6x6_KHR;
+        case PixelFormat::ASTC_8x8:
+            return GL_COMPRESSED_RGBA_ASTC_8x8_KHR;
 #endif
-        default: return GL_RGBA8;
+        default:
+            return GL_RGBA8;
     }
 }
 
@@ -243,13 +288,20 @@ inline GLenum ToGLESType(PixelFormat format) {
  */
 inline GLenum ToGLESPrimitiveType(PrimitiveType type) {
     switch (type) {
-        case PrimitiveType::Points:        return GL_POINTS;
-        case PrimitiveType::Lines:         return GL_LINES;
-        case PrimitiveType::LineStrip:     return GL_LINE_STRIP;
-        case PrimitiveType::Triangles:     return GL_TRIANGLES;
-        case PrimitiveType::TriangleStrip: return GL_TRIANGLE_STRIP;
-        case PrimitiveType::TriangleFan:   return GL_TRIANGLE_FAN;
-        default: return GL_TRIANGLES;
+        case PrimitiveType::Points:
+            return GL_POINTS;
+        case PrimitiveType::Lines:
+            return GL_LINES;
+        case PrimitiveType::LineStrip:
+            return GL_LINE_STRIP;
+        case PrimitiveType::Triangles:
+            return GL_TRIANGLES;
+        case PrimitiveType::TriangleStrip:
+            return GL_TRIANGLE_STRIP;
+        case PrimitiveType::TriangleFan:
+            return GL_TRIANGLE_FAN;
+        default:
+            return GL_TRIANGLES;
     }
 }
 
@@ -258,9 +310,12 @@ inline GLenum ToGLESPrimitiveType(PrimitiveType type) {
  */
 inline GLenum ToGLESIndexType(IndexType type) {
     switch (type) {
-        case IndexType::UInt16: return GL_UNSIGNED_SHORT;
-        case IndexType::UInt32: return GL_UNSIGNED_INT;
-        default: return GL_UNSIGNED_INT;
+        case IndexType::UInt16:
+            return GL_UNSIGNED_SHORT;
+        case IndexType::UInt32:
+            return GL_UNSIGNED_INT;
+        default:
+            return GL_UNSIGNED_INT;
     }
 }
 
@@ -269,15 +324,24 @@ inline GLenum ToGLESIndexType(IndexType type) {
  */
 inline GLenum ToGLESCompareFunc(CompareFunc func) {
     switch (func) {
-        case CompareFunc::Never:        return GL_NEVER;
-        case CompareFunc::Less:         return GL_LESS;
-        case CompareFunc::Equal:        return GL_EQUAL;
-        case CompareFunc::LessEqual:    return GL_LEQUAL;
-        case CompareFunc::Greater:      return GL_GREATER;
-        case CompareFunc::NotEqual:     return GL_NOTEQUAL;
-        case CompareFunc::GreaterEqual: return GL_GEQUAL;
-        case CompareFunc::Always:       return GL_ALWAYS;
-        default: return GL_LESS;
+        case CompareFunc::Never:
+            return GL_NEVER;
+        case CompareFunc::Less:
+            return GL_LESS;
+        case CompareFunc::Equal:
+            return GL_EQUAL;
+        case CompareFunc::LessEqual:
+            return GL_LEQUAL;
+        case CompareFunc::Greater:
+            return GL_GREATER;
+        case CompareFunc::NotEqual:
+            return GL_NOTEQUAL;
+        case CompareFunc::GreaterEqual:
+            return GL_GEQUAL;
+        case CompareFunc::Always:
+            return GL_ALWAYS;
+        default:
+            return GL_LESS;
     }
 }
 
@@ -286,22 +350,38 @@ inline GLenum ToGLESCompareFunc(CompareFunc func) {
  */
 inline GLenum ToGLESBlendFactor(BlendFactor factor) {
     switch (factor) {
-        case BlendFactor::Zero:                  return GL_ZERO;
-        case BlendFactor::One:                   return GL_ONE;
-        case BlendFactor::SrcColor:              return GL_SRC_COLOR;
-        case BlendFactor::OneMinusSrcColor:      return GL_ONE_MINUS_SRC_COLOR;
-        case BlendFactor::DstColor:              return GL_DST_COLOR;
-        case BlendFactor::OneMinusDstColor:      return GL_ONE_MINUS_DST_COLOR;
-        case BlendFactor::SrcAlpha:              return GL_SRC_ALPHA;
-        case BlendFactor::OneMinusSrcAlpha:      return GL_ONE_MINUS_SRC_ALPHA;
-        case BlendFactor::DstAlpha:              return GL_DST_ALPHA;
-        case BlendFactor::OneMinusDstAlpha:      return GL_ONE_MINUS_DST_ALPHA;
-        case BlendFactor::ConstantColor:         return GL_CONSTANT_COLOR;
-        case BlendFactor::OneMinusConstantColor: return GL_ONE_MINUS_CONSTANT_COLOR;
-        case BlendFactor::ConstantAlpha:         return GL_CONSTANT_ALPHA;
-        case BlendFactor::OneMinusConstantAlpha: return GL_ONE_MINUS_CONSTANT_ALPHA;
-        case BlendFactor::SrcAlphaSaturate:      return GL_SRC_ALPHA_SATURATE;
-        default: return GL_ONE;
+        case BlendFactor::Zero:
+            return GL_ZERO;
+        case BlendFactor::One:
+            return GL_ONE;
+        case BlendFactor::SrcColor:
+            return GL_SRC_COLOR;
+        case BlendFactor::OneMinusSrcColor:
+            return GL_ONE_MINUS_SRC_COLOR;
+        case BlendFactor::DstColor:
+            return GL_DST_COLOR;
+        case BlendFactor::OneMinusDstColor:
+            return GL_ONE_MINUS_DST_COLOR;
+        case BlendFactor::SrcAlpha:
+            return GL_SRC_ALPHA;
+        case BlendFactor::OneMinusSrcAlpha:
+            return GL_ONE_MINUS_SRC_ALPHA;
+        case BlendFactor::DstAlpha:
+            return GL_DST_ALPHA;
+        case BlendFactor::OneMinusDstAlpha:
+            return GL_ONE_MINUS_DST_ALPHA;
+        case BlendFactor::ConstantColor:
+            return GL_CONSTANT_COLOR;
+        case BlendFactor::OneMinusConstantColor:
+            return GL_ONE_MINUS_CONSTANT_COLOR;
+        case BlendFactor::ConstantAlpha:
+            return GL_CONSTANT_ALPHA;
+        case BlendFactor::OneMinusConstantAlpha:
+            return GL_ONE_MINUS_CONSTANT_ALPHA;
+        case BlendFactor::SrcAlphaSaturate:
+            return GL_SRC_ALPHA_SATURATE;
+        default:
+            return GL_ONE;
     }
 }
 
@@ -310,12 +390,18 @@ inline GLenum ToGLESBlendFactor(BlendFactor factor) {
  */
 inline GLenum ToGLESBlendOp(BlendOp op) {
     switch (op) {
-        case BlendOp::Add:             return GL_FUNC_ADD;
-        case BlendOp::Subtract:        return GL_FUNC_SUBTRACT;
-        case BlendOp::ReverseSubtract: return GL_FUNC_REVERSE_SUBTRACT;
-        case BlendOp::Min:             return GL_MIN;
-        case BlendOp::Max:             return GL_MAX;
-        default: return GL_FUNC_ADD;
+        case BlendOp::Add:
+            return GL_FUNC_ADD;
+        case BlendOp::Subtract:
+            return GL_FUNC_SUBTRACT;
+        case BlendOp::ReverseSubtract:
+            return GL_FUNC_REVERSE_SUBTRACT;
+        case BlendOp::Min:
+            return GL_MIN;
+        case BlendOp::Max:
+            return GL_MAX;
+        default:
+            return GL_FUNC_ADD;
     }
 }
 
@@ -324,10 +410,14 @@ inline GLenum ToGLESBlendOp(BlendOp op) {
  */
 inline GLenum ToGLESCullMode(CullMode mode) {
     switch (mode) {
-        case CullMode::Front:        return GL_FRONT;
-        case CullMode::Back:         return GL_BACK;
-        case CullMode::FrontAndBack: return GL_FRONT_AND_BACK;
-        default: return GL_BACK;
+        case CullMode::Front:
+            return GL_FRONT;
+        case CullMode::Back:
+            return GL_BACK;
+        case CullMode::FrontAndBack:
+            return GL_FRONT_AND_BACK;
+        default:
+            return GL_BACK;
     }
 }
 
@@ -336,9 +426,12 @@ inline GLenum ToGLESCullMode(CullMode mode) {
  */
 inline GLenum ToGLESFrontFace(FrontFace face) {
     switch (face) {
-        case FrontFace::CCW: return GL_CCW;
-        case FrontFace::CW:  return GL_CW;
-        default: return GL_CCW;
+        case FrontFace::CCW:
+            return GL_CCW;
+        case FrontFace::CW:
+            return GL_CW;
+        default:
+            return GL_CCW;
     }
 }
 
@@ -347,15 +440,24 @@ inline GLenum ToGLESFrontFace(FrontFace face) {
  */
 inline GLenum ToGLESStencilOp(StencilOp op) {
     switch (op) {
-        case StencilOp::Keep:          return GL_KEEP;
-        case StencilOp::Zero:          return GL_ZERO;
-        case StencilOp::Replace:       return GL_REPLACE;
-        case StencilOp::Increment:     return GL_INCR;
-        case StencilOp::IncrementWrap: return GL_INCR_WRAP;
-        case StencilOp::Decrement:     return GL_DECR;
-        case StencilOp::DecrementWrap: return GL_DECR_WRAP;
-        case StencilOp::Invert:        return GL_INVERT;
-        default: return GL_KEEP;
+        case StencilOp::Keep:
+            return GL_KEEP;
+        case StencilOp::Zero:
+            return GL_ZERO;
+        case StencilOp::Replace:
+            return GL_REPLACE;
+        case StencilOp::Increment:
+            return GL_INCR;
+        case StencilOp::IncrementWrap:
+            return GL_INCR_WRAP;
+        case StencilOp::Decrement:
+            return GL_DECR;
+        case StencilOp::DecrementWrap:
+            return GL_DECR_WRAP;
+        case StencilOp::Invert:
+            return GL_INVERT;
+        default:
+            return GL_KEEP;
     }
 }
 
@@ -448,10 +550,14 @@ inline GLboolean IsGLESVertexFormatNormalized(VertexFormat format) {
  */
 inline GLbitfield ToGLESMapAccess(MemoryAccess access) {
     switch (access) {
-        case MemoryAccess::ReadOnly:  return GL_MAP_READ_BIT;
-        case MemoryAccess::WriteOnly: return GL_MAP_WRITE_BIT;
-        case MemoryAccess::ReadWrite: return GL_MAP_READ_BIT | GL_MAP_WRITE_BIT;
-        default: return GL_MAP_WRITE_BIT;
+        case MemoryAccess::ReadOnly:
+            return GL_MAP_READ_BIT;
+        case MemoryAccess::WriteOnly:
+            return GL_MAP_WRITE_BIT;
+        case MemoryAccess::ReadWrite:
+            return GL_MAP_READ_BIT | GL_MAP_WRITE_BIT;
+        default:
+            return GL_MAP_WRITE_BIT;
     }
 }
 
@@ -483,9 +589,12 @@ inline GLenum ToGLESFilterMode(FilterMode mode, bool mipmap = false) {
  */
 inline GLenum ToGLESWrapMode(WrapMode mode, bool hasBorderClampExt = false) {
     switch (mode) {
-        case WrapMode::Repeat:         return GL_REPEAT;
-        case WrapMode::MirroredRepeat: return GL_MIRRORED_REPEAT;
-        case WrapMode::ClampToEdge:    return GL_CLAMP_TO_EDGE;
+        case WrapMode::Repeat:
+            return GL_REPEAT;
+        case WrapMode::MirroredRepeat:
+            return GL_MIRRORED_REPEAT;
+        case WrapMode::ClampToEdge:
+            return GL_CLAMP_TO_EDGE;
         case WrapMode::ClampToBorder:
             // ES需要GL_EXT_texture_border_clamp扩展
 #ifdef GL_CLAMP_TO_BORDER_EXT
@@ -493,7 +602,8 @@ inline GLenum ToGLESWrapMode(WrapMode mode, bool hasBorderClampExt = false) {
 #else
             return GL_CLAMP_TO_EDGE; // 回退到ClampToEdge
 #endif
-        default: return GL_REPEAT;
+        default:
+            return GL_REPEAT;
     }
 }
 

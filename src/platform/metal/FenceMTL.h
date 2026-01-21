@@ -37,7 +37,7 @@ public:
     // Metal特有方法
     id<MTLSharedEvent> GetEvent() const { return m_event; }
     uint64_t GetSignaledValue() const { return m_signaledValue; }
-    
+
     // 用于命令缓冲区编码
     void SignalOnCommandBuffer(id<MTLCommandBuffer> commandBuffer);
 
@@ -46,7 +46,7 @@ private:
     id<MTLSharedEvent> m_event;
     MTLSharedEventListener* m_listener;
     dispatch_queue_t m_listenerQueue;
-    
+
     uint64_t m_signaledValue;
     uint64_t m_currentValue;
     bool m_signaled;

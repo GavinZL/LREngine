@@ -47,7 +47,7 @@ protected:
     BufferUsage m_bufferUsage;
     BufferType m_bufferType;
     bool m_mapped;
-    
+
     // Map回退方案（当glMapBufferRange不可用时）
     uint8_t* m_mappedData;
     MemoryAccess m_mapAccess;

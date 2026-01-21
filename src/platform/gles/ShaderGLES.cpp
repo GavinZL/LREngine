@@ -19,43 +19,35 @@ namespace gles {
 // ShaderGLES
 // ============================================================================
 
-ShaderGLES::ShaderGLES()
-    : m_shaderID(0)
-    , m_stage(ShaderStage::Vertex)
-    , m_compiled(false)
-{
-}
+ShaderGLES::ShaderGLES() : m_shaderID(0), m_stage(ShaderStage::Vertex), m_compiled(false) {}
 
-ShaderGLES::~ShaderGLES()
-{
-    Destroy();
-}
+ShaderGLES::~ShaderGLES() { Destroy(); }
 
-std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage)
-{
+std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage) {
     if (!source) {
         return "";
     }
-    
+
     std::string result;
     const char* sourceStart = source;
-    
+
     // 跳过开头的空白字符
-    while (*sourceStart && (*sourceStart == ' ' || *sourceStart == '\t' || 
-           *sourceStart == '\n' || *sourceStart == '\r')) {
+    while (*sourceStart &&
+           (*sourceStart == ' ' || *sourceStart == '\t' || *sourceStart == '\n' ||
+            *sourceStart == '\r')) {
         sourceStart++;
     }
-    
+
     // 检查是否已有版本声明
     bool hasVersion = (strncmp(sourceStart, "#version", 8) == 0);
-    
+
     if (hasVersion) {
         // 如果已有版本声明，检查是否已有精度声明
         // 如果有，直接返回原始源码
         if (strstr(source, "precision ") != nullptr) {
             return source;
         }
-        
+
         // 找到版本行的结尾，在其后插入精度声明
         const char* versionEnd = strchr(sourceStart, '\n');
         if (versionEnd) {
@@ -67,7 +59,7 @@ std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage)
         // 添加GLSL ES 3.00版本声明
         result = "#version 300 es\n";
     }
-    
+
     // 添加精度声明
     switch (stage) {
         case ShaderStage::Fragment:
@@ -79,47 +71,45 @@ std::string ShaderGLES::PreprocessGLSLES(const char* source, ShaderStage stage)
             result += "precision highp sampler2DArray;\n";
             result += "precision highp sampler2DShadow;\n";
             break;
-            
+
         case ShaderStage::Vertex:
             result += "precision highp float;\n";
             result += "precision highp int;\n";
             break;
-            
+
         case ShaderStage::Compute:
             result += "precision highp float;\n";
             result += "precision highp int;\n";
             result += "precision highp image2D;\n";
             break;
-            
+
         default:
             break;
     }
-    
+
     // 添加剩余源码
     result += "\n";
     result += sourceStart;
-    
+
     return result;
 }
 
-bool ShaderGLES::Compile(const ShaderDescriptor& desc)
-{
+bool ShaderGLES::Compile(const ShaderDescriptor& desc) {
     if (m_shaderID != 0) {
         Destroy();
     }
 
     m_stage = desc.stage;
-    
+
     // 检查着色器阶段是否支持
-    if (desc.stage == ShaderStage::Geometry || 
-        desc.stage == ShaderStage::TessControl || 
+    if (desc.stage == ShaderStage::Geometry || desc.stage == ShaderStage::TessControl ||
         desc.stage == ShaderStage::TessEval) {
         m_compileError = "OpenGL ES 3.0 does not support Geometry/Tessellation shaders";
         LR_SET_ERROR(ErrorCode::ShaderCompileFailed, m_compileError.c_str());
         LR_LOG_ERROR_F("OpenGL ES Shader: %s", m_compileError.c_str());
         return false;
     }
-    
+
     GLenum shaderType = ToGLESShaderStage(desc.stage);
 
     m_shaderID = glCreateShader(shaderType);
@@ -131,13 +121,13 @@ bool ShaderGLES::Compile(const ShaderDescriptor& desc)
 
     // 预处理着色器源码（添加版本和精度声明）
     std::string processedSource = PreprocessGLSLES(desc.source, desc.stage);
-    const char* sourcePtr = processedSource.c_str();
-    
+    const char* sourcePtr       = processedSource.c_str();
+
     glShaderSource(m_shaderID, 1, &sourcePtr, nullptr);
     glCompileShader(m_shaderID);
 
-    LR_LOG_DEBUG_F("OpenGL ES CompileShader: stage=%d, name=%s", 
-                   (int)desc.stage, desc.debugName ? desc.debugName : "unknown");
+    LR_LOG_DEBUG_F("OpenGL ES CompileShader: stage=%d, name=%s", (int)desc.stage,
+                   desc.debugName ? desc.debugName : "unknown");
 
     GLint success;
     glGetShaderiv(m_shaderID, GL_COMPILE_STATUS, &success);
@@ -145,7 +135,7 @@ bool ShaderGLES::Compile(const ShaderDescriptor& desc)
     if (!success) {
         GLint logLength;
         glGetShaderiv(m_shaderID, GL_INFO_LOG_LENGTH, &logLength);
-        
+
         if (logLength > 0) {
             std::vector<char> log(logLength);
             glGetShaderInfoLog(m_shaderID, logLength, nullptr, log.data());
@@ -156,10 +146,10 @@ bool ShaderGLES::Compile(const ShaderDescriptor& desc)
 
         LR_SET_ERROR(ErrorCode::ShaderCompileFailed, m_compileError.c_str());
         LR_LOG_ERROR_F("OpenGL ES Shader Compile Failed: %s", m_compileError.c_str());
-        
+
         // 打印预处理后的源码以便调试
         LR_LOG_DEBUG_F("Preprocessed source:\n%s", processedSource.c_str());
-        
+
         glDeleteShader(m_shaderID);
         m_shaderID = 0;
         return false;
@@ -170,8 +160,7 @@ bool ShaderGLES::Compile(const ShaderDescriptor& desc)
     return true;
 }
 
-void ShaderGLES::Destroy()
-{
+void ShaderGLES::Destroy() {
     if (m_shaderID != 0) {
         glDeleteShader(m_shaderID);
         m_shaderID = 0;
@@ -179,23 +168,13 @@ void ShaderGLES::Destroy()
     m_compiled = false;
 }
 
-bool ShaderGLES::IsCompiled() const
-{
-    return m_compiled;
-}
+bool ShaderGLES::IsCompiled() const { return m_compiled; }
 
-const char* ShaderGLES::GetCompileError() const
-{
-    return m_compileError.c_str();
-}
+const char* ShaderGLES::GetCompileError() const { return m_compileError.c_str(); }
 
-ShaderStage ShaderGLES::GetStage() const
-{
-    return m_stage;
-}
+ShaderStage ShaderGLES::GetStage() const { return m_stage; }
 
-ResourceHandle ShaderGLES::GetNativeHandle() const
-{
+ResourceHandle ShaderGLES::GetNativeHandle() const {
     ResourceHandle handle;
     handle.glHandle = m_shaderID;
     return handle;
@@ -205,19 +184,11 @@ ResourceHandle ShaderGLES::GetNativeHandle() const
 // ShaderProgramGLES
 // ============================================================================
 
-ShaderProgramGLES::ShaderProgramGLES()
-    : m_programID(0)
-    , m_linked(false)
-{
-}
+ShaderProgramGLES::ShaderProgramGLES() : m_programID(0), m_linked(false) {}
 
-ShaderProgramGLES::~ShaderProgramGLES()
-{
-    Destroy();
-}
+ShaderProgramGLES::~ShaderProgramGLES() { Destroy(); }
 
-bool ShaderProgramGLES::Link(IShaderImpl** shaders, uint32_t count)
-{
+bool ShaderProgramGLES::Link(IShaderImpl** shaders, uint32_t count) {
     if (m_programID != 0) {
         Destroy();
     }
@@ -240,7 +211,7 @@ bool ShaderProgramGLES::Link(IShaderImpl** shaders, uint32_t count)
         if (shaders[i] == nullptr) {
             continue;
         }
-        
+
         ShaderGLES* glesShader = static_cast<ShaderGLES*>(shaders[i]);
         if (!glesShader->IsCompiled()) {
             m_linkError = "Attempting to link with uncompiled shader";
@@ -249,7 +220,7 @@ bool ShaderProgramGLES::Link(IShaderImpl** shaders, uint32_t count)
             m_programID = 0;
             return false;
         }
-        
+
         glAttachShader(m_programID, glesShader->GetShaderID());
     }
 
@@ -264,7 +235,7 @@ bool ShaderProgramGLES::Link(IShaderImpl** shaders, uint32_t count)
     if (!success) {
         GLint logLength;
         glGetProgramiv(m_programID, GL_INFO_LOG_LENGTH, &logLength);
-        
+
         if (logLength > 0) {
             std::vector<char> log(logLength);
             glGetProgramInfoLog(m_programID, logLength, nullptr, log.data());
@@ -294,8 +265,7 @@ bool ShaderProgramGLES::Link(IShaderImpl** shaders, uint32_t count)
     return true;
 }
 
-void ShaderProgramGLES::Destroy()
-{
+void ShaderProgramGLES::Destroy() {
     if (m_programID != 0) {
         glDeleteProgram(m_programID);
         m_programID = 0;
@@ -303,104 +273,90 @@ void ShaderProgramGLES::Destroy()
     m_linked = false;
 }
 
-bool ShaderProgramGLES::IsLinked() const
-{
-    return m_linked;
-}
+bool ShaderProgramGLES::IsLinked() const { return m_linked; }
 
-const char* ShaderProgramGLES::GetLinkError() const
-{
-    return m_linkError.c_str();
-}
+const char* ShaderProgramGLES::GetLinkError() const { return m_linkError.c_str(); }
 
-void ShaderProgramGLES::Use()
-{
+void ShaderProgramGLES::Use() {
     if (m_programID != 0) {
         glUseProgram(m_programID);
         LR_LOG_INFO_F("[ShaderGLES] UseProgram: %d", m_programID);
-        
+
         // 验证program是否成功绑定
         GLint currentProgram = 0;
         glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
         if (currentProgram != (GLint)m_programID) {
-            LR_LOG_ERROR_F("[ShaderGLES] ERROR: Program bind failed! Expected %d, got %d", 
-                          m_programID, currentProgram);
+            LR_LOG_ERROR_F("[ShaderGLES] ERROR: Program bind failed! Expected %d, got %d",
+                           m_programID, currentProgram);
         }
     } else {
         LR_LOG_ERROR("[ShaderGLES] UseProgram called with invalid program ID (0)!");
     }
 }
 
-int32_t ShaderProgramGLES::GetUniformLocation(const char* name)
-{
+int32_t ShaderProgramGLES::GetUniformLocation(const char* name) {
     if (m_programID == 0 || name == nullptr) {
-        LR_LOG_ERROR_F("[ShaderGLES] GetUniformLocation: invalid program(%d) or name(%s)", 
+        LR_LOG_ERROR_F("[ShaderGLES] GetUniformLocation: invalid program(%d) or name(%s)",
                        m_programID, name ? name : "null");
         return -1;
     }
     GLint location = glGetUniformLocation(m_programID, name);
-    LR_LOG_INFO_F("[ShaderGLES] GetUniformLocation('%s') = %d (program=%d)", 
-                  name, location, m_programID);
+    LR_LOG_INFO_F("[ShaderGLES] GetUniformLocation('%s') = %d (program=%d)", name, location,
+                  m_programID);
     return location;
 }
 
-void ShaderProgramGLES::SetUniform1i(int32_t location, int32_t value)
-{
+void ShaderProgramGLES::SetUniform1i(int32_t location, int32_t value) {
     if (location >= 0) {
         glUniform1i(location, value);
     }
 }
 
-void ShaderProgramGLES::SetUniform1f(int32_t location, float value)
-{
+void ShaderProgramGLES::SetUniform1f(int32_t location, float value) {
     if (location >= 0) {
         glUniform1f(location, value);
     }
 }
 
-void ShaderProgramGLES::SetUniform2f(int32_t location, float x, float y)
-{
+void ShaderProgramGLES::SetUniform2f(int32_t location, float x, float y) {
     if (location >= 0) {
         glUniform2f(location, x, y);
     }
 }
 
-void ShaderProgramGLES::SetUniform3f(int32_t location, float x, float y, float z)
-{
+void ShaderProgramGLES::SetUniform3f(int32_t location, float x, float y, float z) {
     if (location >= 0) {
         glUniform3f(location, x, y, z);
     }
 }
 
-void ShaderProgramGLES::SetUniform4f(int32_t location, float x, float y, float z, float w)
-{
+void ShaderProgramGLES::SetUniform4f(int32_t location, float x, float y, float z, float w) {
     if (location >= 0) {
         glUniform4f(location, x, y, z, w);
     }
 }
 
-void ShaderProgramGLES::SetUniformMatrix3fv(int32_t location, const float* value, bool transpose)
-{
+void ShaderProgramGLES::SetUniformMatrix3fv(int32_t location, const float* value, bool transpose) {
     if (location >= 0 && value != nullptr) {
         glUniformMatrix3fv(location, 1, transpose ? GL_TRUE : GL_FALSE, value);
     }
 }
 
-void ShaderProgramGLES::SetUniformMatrix4fv(int32_t location, const float* value, bool transpose)
-{
+void ShaderProgramGLES::SetUniformMatrix4fv(int32_t location, const float* value, bool transpose) {
     if (location >= 0 && value != nullptr) {
         // 检查当前绑定的program是否是此program
         GLint currentProgram = 0;
         glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
         if (currentProgram != (GLint)m_programID) {
-            LR_LOG_WARNING_F("[ShaderGLES] SetUniformMatrix4fv: current program(%d) != this program(%d)!",
-                            currentProgram, m_programID);
+            LR_LOG_WARNING_F("[ShaderGLES] SetUniformMatrix4fv: current program(%d) != this "
+                             "program(%d)!",
+                             currentProgram, m_programID);
         }
-        
+
         glUniformMatrix4fv(location, 1, transpose ? GL_TRUE : GL_FALSE, value);
         LR_LOG_INFO_F("[ShaderGLES] SetUniformMatrix4fv: location=%d, transpose=%d, program=%d",
                       location, transpose, m_programID);
-        
+
         // 检查GL错误
         GLenum err = glGetError();
         if (err != GL_NO_ERROR) {
@@ -408,19 +364,17 @@ void ShaderProgramGLES::SetUniformMatrix4fv(int32_t location, const float* value
         }
     } else {
         LR_LOG_WARNING_F("[ShaderGLES] SetUniformMatrix4fv skipped: location=%d, value=%p",
-                        location, value);
+                         location, value);
     }
 }
 
-ResourceHandle ShaderProgramGLES::GetNativeHandle() const
-{
+ResourceHandle ShaderProgramGLES::GetNativeHandle() const {
     ResourceHandle handle;
     handle.glHandle = m_programID;
     return handle;
 }
 
-void ShaderProgramGLES::BindUniformBlock(const char* blockName, uint32_t bindingPoint)
-{
+void ShaderProgramGLES::BindUniformBlock(const char* blockName, uint32_t bindingPoint) {
     if (m_programID == 0 || blockName == nullptr) {
         return;
     }
