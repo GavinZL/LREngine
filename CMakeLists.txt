@@ -62,6 +62,7 @@ set(LRENGINE_CORE_SOURCES
     src/core/LRBuffer.cpp
     src/core/LRShader.cpp
     src/core/LRTexture.cpp
+    src/core/LRPlanarTexture.cpp
     src/core/LRFrameBuffer.cpp
     src/core/LRPipelineState.cpp
     src/core/LRFence.cpp
@@ -82,6 +83,7 @@ set(LRENGINE_CORE_HEADERS
     include/lrengine/core/LRBuffer.h
     include/lrengine/core/LRShader.h
     include/lrengine/core/LRTexture.h
+    include/lrengine/core/LRPlanarTexture.h
     include/lrengine/core/LRFrameBuffer.h
     include/lrengine/core/LRPipelineState.h
     include/lrengine/core/LRFence.h

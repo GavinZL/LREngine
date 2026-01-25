@@ -7,6 +7,7 @@
 #include "lrengine/core/LRBuffer.h"
 #include "lrengine/core/LRShader.h"
 #include "lrengine/core/LRTexture.h"
+#include "lrengine/core/LRPlanarTexture.h"
 #include "lrengine/core/LRFrameBuffer.h"
 #include "lrengine/core/LRPipelineState.h"
 #include "lrengine/core/LRFence.h"
@@ -221,6 +222,21 @@ LRTexture* LRRenderContext::CreateTexture(const TextureDescriptor& desc) {
 
     LRTexture* texture = new LRTexture();
     if (!texture->Initialize(impl, desc)) {
+        delete texture;
+        return nullptr;
+    }
+
+    return texture;
+}
+
+LRPlanarTexture* LRRenderContext::CreatePlanarTexture(const PlanarTextureDescriptor& desc) {
+    if (!mImpl) {
+        LR_SET_ERROR(ErrorCode::NotInitialized, "Render context not initialized");
+        return nullptr;
+    }
+
+    LRPlanarTexture* texture = new LRPlanarTexture();
+    if (!texture->Initialize(this, desc)) {
         delete texture;
         return nullptr;
     }

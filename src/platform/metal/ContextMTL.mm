@@ -150,23 +150,36 @@ bool RenderContextMTL::Initialize(const RenderContextDescriptor& desc) {
             }
             
         #else
-            // macOS平台: 使用NSWindow和NSView
-            NSWindow* window = (__bridge NSWindow*)m_windowHandle;
-            NSView* contentView = [window contentView];
-            
-            // 设置CAMetalLayer
-            [contentView setWantsLayer:YES];
-            m_metalLayer = [CAMetalLayer layer];
-            m_metalLayer.device = m_device;
-            m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-            m_metalLayer.framebufferOnly = YES;
-            m_metalLayer.drawableSize = CGSizeMake(m_width, m_height);
-            m_metalLayer.displaySyncEnabled = m_vsync;
-            
-            // macOS使用contentsScale适配Retina显示
-            m_metalLayer.contentsScale = contentView.window.backingScaleFactor;
-            
-            [contentView setLayer:m_metalLayer];
+        
+            id windowHandle = (__bridge id)m_windowHandle;
+            if ([windowHandle isKindOfClass:[CAMetalLayer class]]) {
+                // 直接使用传入的CAMetalLayer
+                m_metalLayer = (CAMetalLayer*)windowHandle;
+                m_metalLayer.device = m_device;
+                m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+                m_metalLayer.framebufferOnly = YES;
+                
+                LR_LOG_INFO_F("Metal: Using provided CAMetalLayer directly");
+            }
+            else if ([windowHandle isKindOfClass:[NSWindow class]]) {
+                // macOS平台: 使用NSWindow和NSView
+                NSWindow* window = (__bridge NSWindow*)m_windowHandle;
+                NSView* contentView = [window contentView];
+                
+                // 设置CAMetalLayer
+                [contentView setWantsLayer:YES];
+                m_metalLayer = [CAMetalLayer layer];
+                m_metalLayer.device = m_device;
+                m_metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+                m_metalLayer.framebufferOnly = YES;
+                m_metalLayer.drawableSize = CGSizeMake(m_width, m_height);
+                m_metalLayer.displaySyncEnabled = m_vsync;
+                
+                // macOS使用contentsScale适配Retina显示
+                m_metalLayer.contentsScale = contentView.window.backingScaleFactor;
+                
+                [contentView setLayer:m_metalLayer];
+            }
         #endif
     }
 

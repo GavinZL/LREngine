@@ -22,6 +22,8 @@ class LRUniformBuffer;
 class LRShader;
 class LRShaderProgram;
 class LRTexture;
+class LRPlanarTexture;
+struct PlanarTextureDescriptor;
 class LRFrameBuffer;
 class LRPipelineState;
 class LRFence;
@@ -96,6 +98,11 @@ public:
      * @brief 创建纹理
      */
     LRTexture* CreateTexture(const TextureDescriptor& desc);
+    
+    /**
+     * @brief 创建多平面纹理（用于 YUV/NV12/NV21 格式）
+     */
+    LRPlanarTexture* CreatePlanarTexture(const PlanarTextureDescriptor& desc);
     
     /**
      * @brief 创建帧缓冲
