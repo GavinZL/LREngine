@@ -9,6 +9,8 @@
 
 #include "TypeConverterMTL.h"
 #include "lrengine/core/LRError.h"
+#include "lrengine/utils/ImageBuffer.h"
+#include <CoreVideo/CoreVideo.h>
 
 namespace lrengine {
 namespace render {
@@ -247,6 +249,89 @@ bool TextureMTL::CreateSampler(const SamplerDescriptor& desc) {
     }
 
     return true;
+}
+
+bool TextureMTL::ReadbackTo(utils::ImageBuffer* buffer, uint32_t mipLevel) {
+    if (!m_texture || !buffer) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Texture or buffer is null");
+        return false;
+    }
+
+    // 验证缓冲区格式和尺寸是否匹配
+    const auto& bufferDesc = buffer->GetImageDesc();
+    uint32_t mipWidth = m_width >> mipLevel;
+    uint32_t mipHeight = m_height >> mipLevel;
+    if (mipWidth == 0) mipWidth = 1;
+    if (mipHeight == 0) mipHeight = 1;
+
+    if (bufferDesc.width != mipWidth || bufferDesc.height != mipHeight) {
+        LR_SET_ERROR(ErrorCode::InvalidState, "Buffer size mismatch");
+        return false;
+    }
+
+    // 锁定缓冲区以获取 CPU 可访问的内存
+    if (!buffer->Lock(false)) {  // false = 写入模式
+        LR_SET_ERROR(ErrorCode::InvalidState, "Failed to lock buffer");
+        return false;
+    }
+
+    // 根据缓冲区类型选择不同的回读策略
+    bool success = false;
+    
+    if (buffer->GetBufferType() == utils::ImageBuffer::BufferType::CVPixelBuffer) {
+        // iOS/macOS: 使用 CVPixelBuffer 的零拷贝机制
+        #ifdef __APPLE__
+        CVPixelBufferRef pixelBuffer = (CVPixelBufferRef)buffer->GetNativeBuffer();
+        if (pixelBuffer) {
+            // 创建临时纹理从 CVPixelBuffer
+            // 然后使用 blit 命令复制
+            // TODO: 完整实现需要 CVMetalTextureCache
+            success = false;  // 暂时返回 false，待完整实现
+        }
+        #endif
+    } else {
+        // 通用路径：使用 getBytes 同步读取
+        // 注意：这要求纹理的 storageMode 支持 CPU 访问
+        uint32_t bytesPerPixel = GetPixelFormatSize(m_format);
+        uint32_t bytesPerRow = mipWidth * bytesPerPixel;
+        
+        MTLRegion region = MTLRegionMake2D(0, 0, mipWidth, mipHeight);
+        
+        // 对于单平面格式，直接读取
+        if (bufferDesc.planes.size() > 0 && bufferDesc.planes[0].data) {
+            void* destData = const_cast<void*>(bufferDesc.planes[0].data);
+            uint32_t destStride = bufferDesc.planes[0].stride;
+            
+            if (destStride == 0 || destStride == bytesPerRow) {
+                // 紧密排列，可以一次性读取
+                [m_texture getBytes:destData
+                        bytesPerRow:bytesPerRow
+                         fromRegion:region
+                        mipmapLevel:mipLevel];
+                success = true;
+            } else {
+                // 需要按行复制
+                std::vector<uint8_t> tempBuffer(bytesPerRow * mipHeight);
+                [m_texture getBytes:tempBuffer.data()
+                        bytesPerRow:bytesPerRow
+                         fromRegion:region
+                        mipmapLevel:mipLevel];
+                
+                // 按行复制到目标缓冲区
+                uint8_t* src = tempBuffer.data();
+                uint8_t* dst = static_cast<uint8_t*>(destData);
+                for (uint32_t y = 0; y < mipHeight; ++y) {
+                    std::memcpy(dst, src, bytesPerRow);
+                    src += bytesPerRow;
+                    dst += destStride;
+                }
+                success = true;
+            }
+        }
+    }
+
+    buffer->Unlock();
+    return success;
 }
 
 } // namespace mtl

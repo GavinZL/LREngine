@@ -8,6 +8,9 @@
 #include "lrengine/core/LRTypes.h"
 
 namespace lrengine {
+namespace utils {
+    class ImageBuffer;  // 前向声明
+}
 namespace render {
 
 /**
@@ -90,6 +93,38 @@ public:
      * @brief 获取Mipmap层数
      */
     virtual uint32_t GetMipLevels() const = 0;
+
+    // ==================== 新增：阶段 3 接口 ====================
+
+    /**
+     * @brief 从图像数据更新纹理（支持格式转换）
+     * @param imageData 图像数据描述
+     * @param generateMipmaps 是否生成 mipmap
+     * @param flipVertically 是否垂直翻转
+     * @return 是否成功
+     */
+    virtual bool UpdateFromImageData(const ImageDataDesc& imageData,
+                                     bool generateMipmaps = false,
+                                     bool flipVertically = false) {
+        // 默认实现：使用简单的数据更新
+        (void)imageData;
+        (void)generateMipmaps;
+        (void)flipVertically;
+        return false;
+    }
+
+    /**
+     * @brief 从 GPU 纹理回读数据到 CPU 缓冲区
+     * @param buffer 目标图像缓冲区（已分配）
+     * @param mipLevel mipmap 级别
+     * @return 是否成功
+     */
+    virtual bool ReadbackTo(utils::ImageBuffer* buffer, uint32_t mipLevel = 0) {
+        // 默认实现：不支持回读
+        (void)buffer;
+        (void)mipLevel;
+        return false;
+    }
 };
 
 } // namespace render

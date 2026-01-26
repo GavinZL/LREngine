@@ -44,6 +44,9 @@ public:
     id<MTLTexture> GetTexture() const { return m_texture; }
     id<MTLSamplerState> GetSampler() const { return m_sampler; }
 
+    // 阶段 4 新增：Readback 接口
+    bool ReadbackTo(utils::ImageBuffer* buffer, uint32_t mipLevel = 0) override;
+
 private:
     bool CreateSampler(const SamplerDescriptor& desc);
 

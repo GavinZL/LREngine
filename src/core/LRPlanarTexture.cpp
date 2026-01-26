@@ -6,12 +6,15 @@
 #include "lrengine/core/LRPlanarTexture.h"
 #include "lrengine/core/LRRenderContext.h"
 #include "lrengine/core/LRTexture.h"
+#include "lrengine/utils/ImageBufferPool.h"
+#include "platform/interface/ITextureImpl.h"
 
 namespace lrengine {
 namespace render {
 
 LRPlanarTexture::LRPlanarTexture()
-    : LRResource(ResourceType::Texture) {
+    : LRResource(ResourceType::Texture)
+    , mImageFormat(ImageFormat::Unknown) {
 }
 
 LRPlanarTexture::~LRPlanarTexture() {
@@ -27,6 +30,14 @@ bool LRPlanarTexture::Initialize(LRRenderContext* context, const PlanarTextureDe
     mWidth = desc.width;
     mHeight = desc.height;
     mFormat = desc.format;
+    
+    switch (mFormat) {
+        case PlanarFormat::YUV420P: mImageFormat = ImageFormat::YUV420P; break;
+        case PlanarFormat::NV12:    mImageFormat = ImageFormat::NV12;    break;
+        case PlanarFormat::NV21:    mImageFormat = ImageFormat::NV21;    break;
+        case PlanarFormat::RGBA:    mImageFormat = ImageFormat::RGBA8;   break;
+        default:                    mImageFormat = ImageFormat::Unknown; break;
+    }
     
     if (desc.debugName) {
         SetDebugName(desc.debugName);
@@ -188,6 +199,70 @@ void LRPlanarTexture::UpdateAllPlanes(const std::vector<const void*>& planeData,
     }
 }
 
+bool LRPlanarTexture::UpdateFromImage(const ImageDataDesc& imageData,
+                                     const UpdateFromImageOptions& options) {
+    if (!mIsValid) {
+        return false;
+    }
+    if (imageData.width == 0 || imageData.height == 0) {
+        return false;
+    }
+    if (imageData.width != mWidth || imageData.height != mHeight) {
+        return false;
+    }
+    if (imageData.planes.empty()) {
+        return false;
+    }
+
+    // TODO: 处理 flipVertically 和 targetRegion
+    (void)options;
+
+    switch (imageData.format) {
+        case ImageFormat::NV12:
+        case ImageFormat::NV21: {
+            if (imageData.planes.size() < 2 || mPlanes.size() < 2) {
+                return false;
+            }
+            UpdatePlaneData(0, imageData.planes[0].data, imageData.planes[0].stride);
+            UpdatePlaneData(1, imageData.planes[1].data, imageData.planes[1].stride);
+            break;
+        }
+        case ImageFormat::YUV420P: {
+            if (imageData.planes.size() < 3 || mPlanes.size() < 3) {
+                return false;
+            }
+            UpdatePlaneData(0, imageData.planes[0].data, imageData.planes[0].stride);
+            UpdatePlaneData(1, imageData.planes[1].data, imageData.planes[1].stride);
+            UpdatePlaneData(2, imageData.planes[2].data, imageData.planes[2].stride);
+            break;
+        }
+        case ImageFormat::RGBA8:
+        case ImageFormat::BGRA8:
+        case ImageFormat::RGB8:
+        case ImageFormat::GRAY8: {
+            if (mPlanes.empty()) {
+                return false;
+            }
+            UpdatePlaneData(0, imageData.planes[0].data, imageData.planes[0].stride);
+            break;
+        }
+        default:
+            return false;
+    }
+
+    // 如果需要生成 mipmap
+    if (options.generateMipmaps) {
+        for (auto* plane : mPlanes) {
+            if (plane) {
+                plane->GenerateMipmaps();
+            }
+        }
+    }
+
+    mImageFormat = imageData.format;
+    return true;
+}
+
 void LRPlanarTexture::BindAll(uint32_t baseSlot) {
     mBoundBaseSlot = baseSlot;
     for (size_t i = 0; i < mPlanes.size(); ++i) {
@@ -236,12 +311,88 @@ PixelFormat LRPlanarTexture::GetPlaneFormat(uint32_t planeIndex) const {
 }
 
 ResourceHandle LRPlanarTexture::GetNativeHandle() const {
-    if (mPlanes.empty() || !mPlanes[0]) {
+    return GetNativeHandle(0);
+}
+
+ResourceHandle LRPlanarTexture::GetNativeHandle(uint32_t planeIndex) const {
+    if (planeIndex >= mPlanes.size() || !mPlanes[planeIndex]) {
         ResourceHandle h;
         h.ptr = nullptr;
         return h;
     }
-    return mPlanes[0]->GetNativeHandle();
+    return mPlanes[planeIndex]->GetNativeHandle();
+}
+
+bool LRPlanarTexture::Readback(ReadbackResult& outResult, const ReadbackOptions& options) {
+    outResult.success = false;
+    
+    if (!mIsValid || mPlanes.empty()) {
+        return false;
+    }
+
+    // 确定目标格式（默认使用当前纹理格式）
+    ImageFormat targetFormat = options.targetFormat;
+    if (targetFormat == ImageFormat::Unknown) {
+        targetFormat = mImageFormat;
+    }
+
+    // 准备图像描述
+    ImageDataDesc imageDesc;
+    imageDesc.width = mWidth;
+    imageDesc.height = mHeight;
+    imageDesc.format = targetFormat;
+    imageDesc.colorSpace = (options.targetColorSpace != ColorSpace::Unknown) 
+                          ? options.targetColorSpace : ColorSpace::BT709;
+    imageDesc.range = (options.targetColorRange != ColorRange::Unknown)
+                     ? options.targetColorRange : ColorRange::Video;
+
+    // 使用对象池分配缓冲区
+    // TODO: 这里应该使用线程安全的全局对象池
+    // 暂时直接创建缓冲区
+    std::unique_ptr<utils::ImageBuffer> buffer;
+    
+    #ifdef __APPLE__
+    // macOS/iOS: 优先使用 CVPixelBuffer
+    if (options.asyncReadback) {
+        // 异步回读使用 CVPixelBuffer 可以实现零拷贝
+        buffer = std::make_unique<utils::CVPixelBufferWrapper>(imageDesc);
+    } else {
+        // 同步回读使用主机内存
+        buffer = std::make_unique<utils::HostMemoryBuffer>(imageDesc, true);
+    }
+    #else
+    // 其他平台：使用主机内存
+    buffer = std::make_unique<utils::HostMemoryBuffer>(imageDesc, true);
+    #endif
+
+    if (!buffer) {
+        return false;
+    }
+
+    // 对于多平面纹理，需要分别回读每个平面
+    // 暂时只处理单平面格式（RGBA、BGRA 等）
+    if (mPlanes.size() == 1) {
+        // 单平面：直接回读
+        auto* plane = mPlanes[0];
+        if (plane && plane->GetImpl()) {
+            if (plane->GetImpl()->ReadbackTo(buffer.get(), 0)) {
+                outResult.success = true;
+                outResult.imageData = buffer->GetImageDesc();
+                outResult.nativeBuffer = buffer->GetNativeBuffer();
+                
+                // 将缓冲区所有权转移给用户
+                // 注意：这里需要用户自己管理缓冲区生命周期
+                // 或者后续实现使用 shared_ptr
+                buffer.release();  // 释放所有权
+                return true;
+            }
+        }
+    } else {
+        // 多平面（YUV 等）：TODO 后续实现
+        // 需要为每个平面创建缓冲区并分别回读
+    }
+
+    return false;
 }
 
 } // namespace render

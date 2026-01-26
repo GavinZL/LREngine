@@ -326,6 +326,65 @@ struct TextureRegion {
 };
 
 // =============================================================================
+// 图像/平面数据格式（面向上层数据交互）
+// =============================================================================
+
+/**
+ * @brief 通用图像格式（描述 CPU / GPU 之间传输的数据格式）
+ */
+enum class ImageFormat : uint8_t {
+    YUV420P,
+    NV12,
+    NV21,
+    RGBA8,
+    BGRA8,
+    RGB8,
+    GRAY8,
+    Unknown
+};
+
+/**
+ * @brief 颜色空间
+ */
+enum class ColorSpace : uint8_t {
+    BT709,
+    BT601,
+    BT2020,
+    Unknown
+};
+
+/**
+ * @brief 颜色范围
+ */
+enum class ColorRange : uint8_t {
+    Video,   // 限幅（通常对应 [16,235]）
+    Full,
+    Unknown
+};
+
+/**
+ * @brief 单个图像平面描述
+ */
+struct ImagePlaneDesc {
+    const void* data = nullptr;
+    uint32_t    stride = 0;  // 行字节数，0 表示紧密排列
+};
+
+/**
+ * @brief 图像数据描述，用于 CPU 与 GPU 交互
+ */
+struct ImageDataDesc {
+    uint32_t    width  = 0;
+    uint32_t    height = 0;
+    ImageFormat format = ImageFormat::Unknown;
+
+    std::vector<ImagePlaneDesc> planes;
+
+    ColorSpace  colorSpace = ColorSpace::BT709;
+    ColorRange  range      = ColorRange::Video;
+};
+
+// =============================================================================
 // 帧缓冲相关
 // =============================================================================
 

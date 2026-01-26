@@ -72,6 +72,8 @@ set(LRENGINE_CORE_SOURCES
 # 工具库源文件
 set(LRENGINE_UTILS_SOURCES
     src/utils/LRLog.cpp
+    src/utils/ImageBuffer.cpp
+    src/utils/ImageBufferPool.cpp
 )
 
 # 核心头文件
@@ -93,6 +95,8 @@ set(LRENGINE_CORE_HEADERS
 # 工具库头文件
 set(LRENGINE_UTILS_HEADERS
     include/lrengine/utils/LRLog.h
+    include/lrengine/utils/ImageBuffer.h
+    include/lrengine/utils/ImageBufferPool.h
 )
 
 # 平台接口头文件
@@ -310,6 +314,7 @@ if(LRENGINE_ENABLE_METAL AND APPLE)
         "-framework MetalKit"
         "-framework QuartzCore"
         "-framework Foundation"
+        "-framework CoreVideo"
     )
     target_compile_definitions(lrengine PUBLIC LRENGINE_ENABLE_METAL)
     

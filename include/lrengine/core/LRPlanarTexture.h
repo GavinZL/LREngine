@@ -103,6 +103,78 @@ public:
      */
     void UpdateAllPlanes(const std::vector<const void*>& planeData,
                         const std::vector<uint32_t>& strides = {});
+
+// ==================== 新增：阶段 1 接口 ====================
+public:
+    /**
+     * @brief 纹理更新配置选项
+     */
+    struct UpdateFromImageOptions {
+        bool generateMipmaps = false;       ///< 是否生成 mipmap
+        bool flipVertically = false;        ///< 是否垂直翻转
+        TextureRegion* targetRegion = nullptr;  ///< 目标区域（nullptr 表示整个纹理）
+        
+        UpdateFromImageOptions() = default;
+    };
+    
+    /**
+     * @brief 从 CPU 图像数据更新纹理（使用默认选项）
+     * @param imageData 图像数据描述
+     * @return 是否成功
+     */
+    bool UpdateFromImage(const ImageDataDesc& imageData) {
+        return UpdateFromImage(imageData, UpdateFromImageOptions());
+    }
+
+    /**
+     * @brief 从 CPU 图像数据更新纹理
+     * @param imageData 图像数据描述（包含格式、平面数据等）
+     * @param options 更新选项
+     * @return 是否成功
+     */
+    bool UpdateFromImage(const ImageDataDesc& imageData,
+                        const UpdateFromImageOptions& options);
+
+    /**
+     * @brief 回读配置选项
+     */
+    struct ReadbackOptions {
+        ImageFormat targetFormat = ImageFormat::Unknown;  ///< 目标格式（Unknown 表示保持原格式）
+        ColorSpace targetColorSpace = ColorSpace::Unknown;
+        ColorRange targetColorRange = ColorRange::Unknown;
+        bool asyncReadback = true;          ///< 是否异步回读
+        void* userContext = nullptr;        ///< 用户上下文指针
+        
+        ReadbackOptions() = default;
+    };
+    
+    /**
+     * @brief 回读结果
+     */
+    struct ReadbackResult {
+        bool success = false;
+        ImageDataDesc imageData;            ///< 回读的图像数据
+        void* nativeBuffer = nullptr;       ///< 平台原生缓冲区（CVPixelBuffer* / AHardwareBuffer*）
+        
+        ReadbackResult() = default;
+    };
+    
+    /**
+     * @brief 从 GPU 纹理回读数据到 CPU（使用默认选项）
+     * @param outResult 回读结果
+     * @return 是否成功发起回读
+     */
+    bool Readback(ReadbackResult& outResult) {
+        return Readback(outResult, ReadbackOptions());
+    }
+
+    /**
+     * @brief 从 GPU 纹理回读数据到 CPU
+     * @param outResult 回读结果（包含图像数据或原生缓冲区）
+     * @param options 回读选项
+     * @return 是否成功发起回读
+     */
+    bool Readback(ReadbackResult& outResult, const ReadbackOptions& options);
     
     // =========================================================================
     // 纹理绑定
@@ -148,9 +220,14 @@ public:
     uint32_t GetHeight() const { return mHeight; }
     
     /**
-     * @brief 获取平面纹理格式
+     * @brief 获取内部平面布局格式
      */
     PlanarFormat GetFormat() const { return mFormat; }
+    
+    /**
+     * @brief 获取对外图像格式（与 UpdateFromImage 对应）
+     */
+    ImageFormat GetImageFormat() const { return mImageFormat; }
     
     /**
      * @brief 获取指定平面的尺寸
@@ -168,9 +245,15 @@ public:
     PixelFormat GetPlaneFormat(uint32_t planeIndex) const;
     
     /**
-     * @brief 获取原生句柄（返回第一个平面的句柄）
+     * @brief 获取原生句柄（默认返回第一个平面的句柄）
      */
     ResourceHandle GetNativeHandle() const override;
+    
+    /**
+     * @brief 获取指定平面的原生句柄
+     * @param planeIndex 平面索引
+     */
+    ResourceHandle GetNativeHandle(uint32_t planeIndex) const;
     
 protected:
     friend class LRRenderContext;
@@ -207,6 +290,7 @@ private:
     uint32_t mWidth = 0;
     uint32_t mHeight = 0;
     PlanarFormat mFormat = PlanarFormat::NV12;
+    ImageFormat mImageFormat = ImageFormat::Unknown;
     uint32_t mBoundBaseSlot = 0;
 };
 
