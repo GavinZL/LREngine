@@ -72,22 +72,13 @@ bool TextureMTL::Create(const TextureDescriptor& desc) {
     if (IsDepthFormat(desc.format)) {
         // 深度/模板纹理：所有平台都使用Private模式
         texDesc.storageMode = MTLStorageModePrivate;
-    } else if (desc.data == nullptr) {
-        // 离屏渲染纹理（无初始数据）
-        #if TARGET_OS_IPHONE || TARGET_OS_IOS
-            // iOS: 如果仅用于RenderTarget且不需CPU访问，使用Private模式更高效
-            // 但为了兼容性（支持后续可能的CPU读取），默认使用Shared
-            texDesc.storageMode = MTLStorageModeShared;
-        #else
-            // macOS: 离屏渲染纹理使用Private模式（GPU专用，最佳性能）
-            texDesc.storageMode = MTLStorageModePrivate;
-        #endif
     } else {
-        // 有初始数据的纹理：需要CPU写入
+        // 普通纹理：使用Shared/Managed模式以支持CPU数据上传
         #if TARGET_OS_IPHONE || TARGET_OS_IOS
             texDesc.storageMode = MTLStorageModeShared;
         #else
-            texDesc.storageMode = MTLStorageModeManaged;  // macOS支持CPU写入后同步到GPU
+            // macOS: 使用Managed模式支持CPU写入后同步到GPU
+            texDesc.storageMode = MTLStorageModeManaged;
         #endif
     }
 
